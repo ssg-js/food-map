@@ -1,0 +1,16 @@
+---
+description: Output style rules for command explanations
+alwaysApply: true
+---
+
+# Command Explanation Style
+
+When explaining terminal commands, add short inline comments next to options to explain what each option does.
+
+Prefer concise examples:
+
+```bash
+git log --oneline -5 # --oneline: show each commit in one line, -5: show latest 5 commits
+```
+
+For multiple options, explain only the options that matter for the user's question.

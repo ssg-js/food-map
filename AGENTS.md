@@ -397,6 +397,8 @@ After implementation:
 4. Show commit message
 5. Explain verification steps
 
+Cursor-specific response style rules live in `.cursor/rules`.
+
 Always keep documentation synchronized with code changes.
 
 Never modify architecture without explanation.

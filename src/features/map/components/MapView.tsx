@@ -8,8 +8,17 @@ import { MapContainer, type Marker, type MarkerClickEvent } from "@/widgets/map"
 import { useContainerSize } from "../hooks/useContainerSize";
 import { useCurrentLocation } from "../hooks/useCurrentLocation";
 import { useRestaurants } from "../hooks/useRestaurants";
+import { MapCurrentLocationButton } from "./MapCurrentLocationButton";
+import { MapEmptyState } from "./MapEmptyState";
+import { MapSearchControls } from "./MapSearchControls";
 import { RestaurantBottomSheet } from "./RestaurantBottomSheet";
 import { UserLocationMarker } from "./UserLocationMarker";
+import {
+  filterRestaurants,
+  getRestaurantCategories,
+  hasActiveRestaurantFilter,
+  type RestaurantFilterState,
+} from "../model/restaurant-filter";
 
 function LocationStatusBanner({
   message,
@@ -27,7 +36,7 @@ function LocationStatusBanner({
 
   return (
     <div
-      className={`absolute left-4 right-4 top-4 z-50 rounded-lg px-4 py-2 text-sm shadow-md ${styles[variant]}`}
+      className={`absolute left-4 right-4 top-44 z-50 rounded-lg px-4 py-2 text-sm shadow-md ${styles[variant]}`}
       role="status"
     >
       {message}
@@ -54,9 +63,22 @@ export function MapView() {
   const [mapLoadStatus, setMapLoadStatus] =
     useState<MapLoadStatus>("loading");
   const [mapErrorMessage, setMapErrorMessage] = useState<string | null>(null);
+  const [filter, setFilter] = useState<RestaurantFilterState>({
+    searchTerm: "",
+    selectedCategory: null,
+  });
+  const filteredRestaurants = useMemo(
+    () => filterRestaurants(restaurants, filter),
+    [filter, restaurants],
+  );
+  const categories = useMemo(
+    () => getRestaurantCategories(restaurants),
+    [restaurants],
+  );
+  const hasActiveFilter = hasActiveRestaurantFilter(filter);
   const markers = useMemo<Marker[]>(
     () =>
-      restaurants.map((restaurant) => ({
+      filteredRestaurants.map((restaurant) => ({
         id: restaurant.id,
         coordinate: {
           latitude: restaurant.latitude,
@@ -65,18 +87,64 @@ export function MapView() {
         title: restaurant.name,
         description: restaurant.description,
       })),
-    [restaurants],
+    [filteredRestaurants],
   );
   const selectedRestaurant = useMemo(
     () =>
-      restaurants.find((restaurant) => restaurant.id === selectedRestaurantId) ??
-      null,
-    [restaurants, selectedRestaurantId],
+      filteredRestaurants.find(
+        (restaurant) => restaurant.id === selectedRestaurantId,
+      ) ?? null,
+    [filteredRestaurants, selectedRestaurantId],
   );
 
   const handleMarkerClick = useCallback((event: MarkerClickEvent) => {
     setSelectedRestaurantId(event.markerId);
   }, []);
+
+  const updateFilter = useCallback(
+    (nextFilter: RestaurantFilterState) => {
+      setFilter(nextFilter);
+
+      if (!selectedRestaurantId) return;
+
+      const isSelectedRestaurantVisible = filterRestaurants(
+        restaurants,
+        nextFilter,
+      ).some((restaurant) => restaurant.id === selectedRestaurantId);
+
+      if (!isSelectedRestaurantVisible) {
+        setSelectedRestaurantId(null);
+      }
+    },
+    [restaurants, selectedRestaurantId],
+  );
+
+  const handleSearchTermChange = useCallback(
+    (searchTerm: string) => {
+      updateFilter({ ...filter, searchTerm });
+    },
+    [filter, updateFilter],
+  );
+
+  const handleCategoryChange = useCallback(
+    (selectedCategory: string | null) => {
+      updateFilter({ ...filter, selectedCategory });
+    },
+    [filter, updateFilter],
+  );
+
+  const handleResetFilter = useCallback(() => {
+    updateFilter({
+      searchTerm: "",
+      selectedCategory: null,
+    });
+  }, [updateFilter]);
+
+  const handleMoveToCurrentLocation = useCallback(() => {
+    if (!position) return;
+
+    setCenter(position.latitude, position.longitude);
+  }, [position, setCenter]);
 
   const handleMapReady = useCallback(() => {
     setMapLoadStatus("ready");
@@ -95,6 +163,11 @@ export function MapView() {
 
   const center = { latitude, longitude };
   const isMapReady = containerSize.width > 0 && containerSize.height > 0;
+  const showEmptyState =
+    !isRestaurantsPending &&
+    !isRestaurantsError &&
+    restaurants.length > 0 &&
+    filteredRestaurants.length === 0;
   const statusBanner = useMemo(() => {
     if (mapLoadStatus === "error") {
       return {
@@ -168,6 +241,18 @@ export function MapView() {
         onMarkerClick={handleMarkerClick}
       />
 
+      <MapSearchControls
+        categories={categories}
+        hasActiveFilter={hasActiveFilter}
+        resultCount={filteredRestaurants.length}
+        searchTerm={filter.searchTerm}
+        selectedCategory={filter.selectedCategory}
+        totalCount={restaurants.length}
+        onCategoryChange={handleCategoryChange}
+        onReset={handleResetFilter}
+        onSearchTermChange={handleSearchTermChange}
+      />
+
       {isMapReady && position && status === "success" && (
         <UserLocationMarker
           coordinate={position}
@@ -183,6 +268,13 @@ export function MapView() {
           message={statusBanner.message}
         />
       )}
+
+      {showEmptyState && <MapEmptyState onReset={handleResetFilter} />}
+
+      <MapCurrentLocationButton
+        isDisabled={!position || status !== "success"}
+        onClick={handleMoveToCurrentLocation}
+      />
 
       <RestaurantBottomSheet
         restaurant={selectedRestaurant}
