@@ -1,5 +1,11 @@
 import { create } from "zustand";
 
+import {
+  DEFAULT_MAP_LATITUDE,
+  DEFAULT_MAP_LONGITUDE,
+  DEFAULT_MAP_ZOOM,
+} from "@/shared/constants/map";
+
 interface MapState {
   latitude: number;
   longitude: number;
@@ -8,14 +14,10 @@ interface MapState {
   setZoom: (zoom: number) => void;
 }
 
-const DEFAULT_LATITUDE = 37.5665;
-const DEFAULT_LONGITUDE = 126.978;
-const DEFAULT_ZOOM = 13;
-
 export const useMapStore = create<MapState>((set) => ({
-  latitude: DEFAULT_LATITUDE,
-  longitude: DEFAULT_LONGITUDE,
-  zoom: DEFAULT_ZOOM,
+  latitude: DEFAULT_MAP_LATITUDE,
+  longitude: DEFAULT_MAP_LONGITUDE,
+  zoom: DEFAULT_MAP_ZOOM,
   setCenter: (latitude, longitude) => set({ latitude, longitude }),
   setZoom: (zoom) => set({ zoom }),
 }));

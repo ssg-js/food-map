@@ -1,25 +1,23 @@
 "use client";
 
-import { useRef, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
+import { createMapProvider, type MapProviderType } from "../lib/create-map-provider";
 import { MapContextProvider } from "../model/map-context";
-import type { IMapProvider } from "../model/map-provider";
 
 interface MapProviderProps {
   children: ReactNode;
-  createProvider: () => IMapProvider;
+  /** 직렬화 가능한 SDK 선택 값. Server Component에서 전달 가능. */
+  providerType?: MapProviderType;
 }
 
-export function MapProvider({ children, createProvider }: MapProviderProps) {
-  const providerRef = useRef<IMapProvider | null>(null);
-
-  if (!providerRef.current) {
-    providerRef.current = createProvider();
-  }
+export function MapProvider({
+  children,
+  providerType = "stub",
+}: MapProviderProps) {
+  const [provider] = useState(() => createMapProvider(providerType));
 
   return (
-    <MapContextProvider provider={providerRef.current}>
-      {children}
-    </MapContextProvider>
+    <MapContextProvider provider={provider}>{children}</MapContextProvider>
   );
 }

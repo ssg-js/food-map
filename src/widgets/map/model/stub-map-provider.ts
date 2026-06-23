@@ -33,6 +33,9 @@ export class StubMapProvider implements IMapProvider {
     this.center = options.center;
     this.zoom = options.zoom;
     container.dataset.mapProvider = "stub";
+    container.style.background =
+      "linear-gradient(135deg, #e4e4e7 25%, #d4d4d8 25%, #d4d4d8 50%, #e4e4e7 50%, #e4e4e7 75%, #d4d4d8 75%)";
+    container.style.backgroundSize = "40px 40px";
   }
 
   destroy(): void {
