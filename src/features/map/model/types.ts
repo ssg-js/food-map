@@ -5,6 +5,7 @@ export type MapRestaurant = Restaurant;
 
 export type GeolocationStatus =
   | "idle"
+  | "requesting"
   | "success"
   | "error"
   | "denied";

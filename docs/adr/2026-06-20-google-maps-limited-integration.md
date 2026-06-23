@@ -1,6 +1,6 @@
 # Context
 
-MVP 지도 화면은 현재 실제 지도 SDK 없이 `StubMapProvider`로 동작한다. 다음 단계에서 Google Maps JavaScript API를 붙일 예정이지만, 초기 프로젝트 단계에서는 비용이 발생하지 않도록 사용 범위를 최대한 제한해야 한다.
+MVP 지도 화면은 `IMapProvider` 추상화 위에서 동작한다. 초기에는 `StubMapProvider`로 UI 흐름을 검증했지만, 현재는 Google Maps JavaScript API key가 설정되어 `/map`에서 실제 Google Maps 렌더링이 필요하다. 초기 프로젝트 단계에서는 비용이 발생하지 않도록 사용 범위를 최대한 제한해야 한다.
 
 Google Maps Platform은 과금 계정과 API 키가 필요하다. 2025년 이후에는 기존 월 $200 크레딧 방식이 아니라 SKU별 월 무료 사용량 기준으로 운영된다. Maps JavaScript API의 Dynamic Maps는 Essentials SKU이며, 지도 초기화에 따른 successful map load가 과금 이벤트가 된다.
 
@@ -26,13 +26,13 @@ Google Maps Platform은 과금 계정과 API 키가 필요하다. 2025년 이후
 
 # Decision
 
-초기에는 Option 2를 선택한다.
+초기 설계에서는 Option 2를 선택했고, API key 설정 이후 제한 조건을 유지한 채 Option 1의 최소 범위만 구현한다.
 
-당장은 Google Maps SDK를 설치하거나 API 키를 코드에 연결하지 않는다. 대신 다음 구현 방향만 확정한다.
+Google Maps SDK를 npm package로 추가하지 않고, `/map` 페이지 진입 시 클라이언트에서 Maps JavaScript API script만 lazy load한다.
 
 1. `widgets/map`의 `IMapProvider` 인터페이스는 유지한다.
-2. 향후 `GoogleMapProvider`가 `IMapProvider`를 구현한다.
-3. `MapProviderType`은 현재 `"stub"`만 허용하고, 실제 연동 시 `"google"`을 추가한다.
+2. `GoogleMapProvider`가 `IMapProvider`를 구현한다.
+3. `MapProviderType`은 `"stub" | "google"`을 허용한다.
 4. Server Component는 `providerType="google"`처럼 직렬화 가능한 문자열만 전달한다.
 5. Google Maps provider 생성, script loading, SDK 인스턴스 관리는 `"use client"` 경계 안에서만 수행한다.
 6. Places, Geocoding, Directions, Routes API는 MVP에서 사용하지 않는다.
@@ -54,9 +54,9 @@ Google Maps Platform은 과금 계정과 API 키가 필요하다. 2025년 이후
 - 검색 자동완성, 길찾기, 거리 계산, 장소 상세 조회는 MVP 범위에서 제외한다.
 - 지도 로드는 페이지 진입당 1회만 발생하도록 provider 인스턴스를 재사용한다.
 
-# Expected Implementation Shape
+# Implementation Shape
 
-예상 파일 구조:
+파일 구조:
 
 ```text
 src/widgets/map/
@@ -93,10 +93,10 @@ NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=
 
 # Consequences
 
-- 현재 MVP는 비용 없이 Stub 지도 상태로 유지된다.
-- 실제 Google Maps 연동 전 비용 제어 정책을 먼저 확정했다.
+- 현재 MVP는 `/map` 페이지에서 Google Maps를 렌더링한다.
+- `/map` 외 페이지에서는 Google Maps script를 로드하지 않는다.
 - 지도 SDK 교체 가능성은 기존 `IMapProvider` 구조로 유지된다.
-- Google Maps 연동 시 기능 범위는 지도 표시와 마커 표시로 제한된다.
+- Google Maps 연동 기능 범위는 지도 표시와 마커 표시로 제한된다.
 - Places, Geocoding, Directions를 붙이는 순간 별도 과금 SKU가 생기므로 별도 ADR이 필요하다.
 
 # Verification Plan

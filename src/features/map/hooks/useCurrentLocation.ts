@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import type { GeolocationState } from "../model/types";
 
 const INITIAL_STATE: GeolocationState = {
-  status: "idle",
+  status: "requesting",
   position: null,
   errorMessage: null,
 };
