@@ -18,6 +18,7 @@
 - `/map` 페이지에서 `MapProvider` + `MapView` 조합으로 지도 화면을 구성했다.
 - `useCurrentLocation`으로 Geolocation API 권한 요청 및 좌표 획득.
 - 획득한 좌표로 `useMapStore.setCenter` 호출하여 지도 중심을 이동.
+- 현재 위치 버튼 클릭 시 저장된 현재 위치 좌표로 지도 중심을 다시 이동.
 - `useRestaurants`가 React Query로 `/api/restaurants`를 조회하고, 조회 결과를 SDK 독립적인 `Marker` 타입으로 변환해 `MapContainer`에 전달.
 - Google Maps JavaScript API는 `/map` 진입 시 클라이언트에서만 lazy load한다.
 - Google Maps 초기화 성공/실패 상태를 `MapContainer`에서 `MapView`로 전달해 지도 로딩과 에러 UI를 안정화했다.
@@ -28,6 +29,7 @@
 
 - 홈(`/`)에서 `/map` 진입 가능.
 - 현재 위치 권한 요청 및 지도 중심 이동.
+- 현재 위치 버튼으로 지도 중심 재이동 가능.
 - Google Maps 위에 5개 mock 맛집 마커 표시 및 바텀시트 요약 정보 표시.
 - 맛집 목록은 React Query 캐시를 통해 서버 상태로 관리.
 - 지도 SDK 로딩 중/실패 상태가 사용자에게 표시된다.

@@ -8,6 +8,7 @@ import { MapContainer, type Marker, type MarkerClickEvent } from "@/widgets/map"
 import { useContainerSize } from "../hooks/useContainerSize";
 import { useCurrentLocation } from "../hooks/useCurrentLocation";
 import { useRestaurants } from "../hooks/useRestaurants";
+import { MapCurrentLocationButton } from "./MapCurrentLocationButton";
 import { MapEmptyState } from "./MapEmptyState";
 import { MapSearchControls } from "./MapSearchControls";
 import { RestaurantBottomSheet } from "./RestaurantBottomSheet";
@@ -139,6 +140,12 @@ export function MapView() {
     });
   }, [updateFilter]);
 
+  const handleMoveToCurrentLocation = useCallback(() => {
+    if (!position) return;
+
+    setCenter(position.latitude, position.longitude);
+  }, [position, setCenter]);
+
   const handleMapReady = useCallback(() => {
     setMapLoadStatus("ready");
     setMapErrorMessage(null);
@@ -263,6 +270,11 @@ export function MapView() {
       )}
 
       {showEmptyState && <MapEmptyState onReset={handleResetFilter} />}
+
+      <MapCurrentLocationButton
+        isDisabled={!position || status !== "success"}
+        onClick={handleMoveToCurrentLocation}
+      />
 
       <RestaurantBottomSheet
         restaurant={selectedRestaurant}
