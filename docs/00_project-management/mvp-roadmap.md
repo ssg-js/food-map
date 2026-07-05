@@ -1,6 +1,14 @@
+# Food Map MVP Roadmap
+
+이 문서는 개발 완료 순서대로 MVP 범위와 다음 확장 지점을 정리한다.
+
+---
+
+# MVP 1 - Map Exploration
+
 # Goal
 
-MVP 1의 목표는 사용자가 지도 페이지에 진입해 현재 위치 기반으로 주변 맛집을 탐색하는 기본 흐름을 검증하는 것이다.
+사용자가 지도 페이지에 진입해 현재 위치 기반으로 주변 맛집을 탐색하는 기본 흐름을 검증한다.
 
 # Scope
 
@@ -52,50 +60,6 @@ Done
 
 ---
 
-# MVP 3 - Database Restaurant Seed
-
-# Goal
-
-mock 맛집 데이터 의존을 줄이고 PostgreSQL + Prisma 기반 맛집 데이터 조회로 전환할 수 있는 DB 계층을 구축한다.
-
-# Scope
-
-- Prisma `Restaurant` 모델 정의
-- Restaurant 테이블 migration 추가
-- 기존 mock 맛집 데이터를 seed 데이터로 이전
-- Prisma seed 스크립트 추가
-- DB 관련 npm scripts 추가
-- `/api/restaurants` Prisma Client 기반 DB 조회 전환
-
-# Out of Scope
-
-- React Query hook 수정
-- 지도 UI 수정
-- 서버 검색
-- 상세 페이지
-- 로그인
-- 리뷰
-- 즐겨찾기
-
-# Done Criteria
-
-- `Restaurant` 모델이 Prisma schema에 정의된다.
-- migration SQL로 Restaurant 테이블과 인덱스를 생성할 수 있다.
-- seed 스크립트로 기존 mock 맛집 데이터를 DB에 upsert할 수 있다.
-- `/api/restaurants`가 DB에 적재된 맛집 데이터를 반환한다.
-- `npm run db:generate`가 통과한다.
-- `npm run lint`, `npx tsc --noEmit`, `npm run build`가 통과한다.
-
-# Branch
-
-`feature/db-restaurant-seed`
-
-# Status
-
-Done
-
----
-
 # MVP 2 - Map Search and Filter
 
 # Goal
@@ -135,6 +99,97 @@ Done
 # Branch
 
 `feature/map-search-filter`
+
+# Status
+
+Done
+
+---
+
+# MVP 3 - Database Restaurant Seed
+
+# Goal
+
+mock 맛집 데이터 의존을 줄이고 PostgreSQL + Prisma 기반 맛집 데이터 조회로 전환한다.
+
+# Scope
+
+- Prisma `Restaurant` 모델 정의
+- Restaurant 테이블 migration 추가
+- 기존 mock 맛집 데이터를 seed 데이터로 이전
+- Prisma seed 스크립트 추가
+- DB 관련 npm scripts 추가
+- `/api/restaurants` Prisma Client 기반 DB 조회 전환
+
+# Out of Scope
+
+- React Query hook 수정
+- 지도 UI 수정
+- 서버 검색
+- 상세 페이지
+- 로그인
+- 리뷰
+- 즐겨찾기
+
+# Done Criteria
+
+- `Restaurant` 모델이 Prisma schema에 정의된다.
+- migration SQL로 Restaurant 테이블과 인덱스를 생성할 수 있다.
+- seed 스크립트로 기존 mock 맛집 데이터를 DB에 upsert할 수 있다.
+- `/api/restaurants`가 DB에 적재된 맛집 데이터를 반환한다.
+- `npm run db:generate`가 통과한다.
+- `npm run lint`, `npx tsc --noEmit`, `npm run build`가 통과한다.
+
+# Branch
+
+`feature/db-restaurant-seed`
+
+# Status
+
+Done
+
+---
+
+# MVP 4 - Server Restaurant Filter
+
+# Goal
+
+맛집 검색/필터를 클라이언트 derived state에서 서버 query parameter 기반 DB 조회로 전환한다.
+
+# Scope
+
+- `/api/restaurants?search=&category=` query parameter 추가
+- Prisma `where` 기반 이름, 주소, 카테고리 검색
+- 카테고리 정확 일치 필터
+- React Query query key에 필터 상태 포함
+- 지도 마커를 서버 필터 결과로 렌더링
+- 서버 검색/필터 기능 문서 추가
+
+# Out of Scope
+
+- 검색 debounce
+- pagination
+- 지도 bounds 기반 조회
+- 카테고리 목록 전용 endpoint
+- Google Places API
+- 상세 페이지
+- 로그인
+- 리뷰
+- 즐겨찾기
+
+# Done Criteria
+
+- 검색어가 `/api/restaurants` query parameter로 전달된다.
+- 카테고리가 `/api/restaurants` query parameter로 전달된다.
+- 검색어와 카테고리가 함께 적용된다.
+- React Query가 필터별 query key로 서버 결과를 캐시한다.
+- 결과 없음 안내 UI가 서버 필터 결과 기준으로 표시된다.
+- `/api/restaurants`는 기존 `Restaurant[]` 응답 계약을 유지한다.
+- `npm run lint`, `npx tsc --noEmit`, `npm run build`가 통과한다.
+
+# Branch
+
+`feature/server-restaurant-filter`
 
 # Status
 
