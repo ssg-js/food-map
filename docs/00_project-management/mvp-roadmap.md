@@ -52,6 +52,50 @@ Done
 
 ---
 
+# MVP 3 - Database Restaurant Seed
+
+# Goal
+
+mock 맛집 데이터 의존을 줄이고 PostgreSQL + Prisma 기반 맛집 데이터 조회로 전환할 수 있는 DB 계층을 구축한다.
+
+# Scope
+
+- Prisma `Restaurant` 모델 정의
+- Restaurant 테이블 migration 추가
+- 기존 mock 맛집 데이터를 seed 데이터로 이전
+- Prisma seed 스크립트 추가
+- DB 관련 npm scripts 추가
+- `/api/restaurants` Prisma Client 기반 DB 조회 전환
+
+# Out of Scope
+
+- React Query hook 수정
+- 지도 UI 수정
+- 서버 검색
+- 상세 페이지
+- 로그인
+- 리뷰
+- 즐겨찾기
+
+# Done Criteria
+
+- `Restaurant` 모델이 Prisma schema에 정의된다.
+- migration SQL로 Restaurant 테이블과 인덱스를 생성할 수 있다.
+- seed 스크립트로 기존 mock 맛집 데이터를 DB에 upsert할 수 있다.
+- `/api/restaurants`가 DB에 적재된 맛집 데이터를 반환한다.
+- `npm run db:generate`가 통과한다.
+- `npm run lint`, `npx tsc --noEmit`, `npm run build`가 통과한다.
+
+# Branch
+
+`feature/db-restaurant-seed`
+
+# Status
+
+Done
+
+---
+
 # MVP 2 - Map Search and Filter
 
 # Goal
