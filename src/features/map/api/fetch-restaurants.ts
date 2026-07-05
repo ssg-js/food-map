@@ -1,5 +1,7 @@
 import type { Restaurant } from "@/entities/restaurant/type/restaurant";
 
+import type { RestaurantFilterState } from "../model/restaurant-filter";
+
 function isRestaurant(value: unknown): value is Restaurant {
   if (typeof value !== "object" || value === null) {
     return false;
@@ -27,8 +29,27 @@ function parseRestaurants(value: unknown): Restaurant[] {
   return value;
 }
 
-export async function fetchRestaurants(): Promise<Restaurant[]> {
-  const response = await fetch("/api/restaurants");
+function buildRestaurantsUrl(filter: RestaurantFilterState): string {
+  const searchParams = new URLSearchParams();
+  const searchTerm = filter.searchTerm.trim();
+
+  if (searchTerm) {
+    searchParams.set("search", searchTerm);
+  }
+
+  if (filter.selectedCategory) {
+    searchParams.set("category", filter.selectedCategory);
+  }
+
+  const queryString = searchParams.toString();
+
+  return queryString ? `/api/restaurants?${queryString}` : "/api/restaurants";
+}
+
+export async function fetchRestaurants(
+  filter: RestaurantFilterState,
+): Promise<Restaurant[]> {
+  const response = await fetch(buildRestaurantsUrl(filter));
 
   if (!response.ok) {
     throw new Error("맛집 목록을 불러오지 못했습니다.");

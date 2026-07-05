@@ -1,10 +1,49 @@
+import type { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 
 import { prisma } from "@/shared/lib/prisma";
 
-export async function GET() {
+interface RestaurantSearchParams {
+  search: string;
+  category: string | null;
+}
+
+function getRestaurantSearchParams(request: Request): RestaurantSearchParams {
+  const { searchParams } = new URL(request.url);
+  const search = searchParams.get("search")?.trim() ?? "";
+  const category = searchParams.get("category")?.trim() || null;
+
+  return { search, category };
+}
+
+function buildRestaurantWhere({
+  search,
+  category,
+}: RestaurantSearchParams): Prisma.RestaurantWhereInput {
+  const conditions: Prisma.RestaurantWhereInput[] = [];
+
+  if (search) {
+    conditions.push({
+      OR: [
+        { name: { contains: search, mode: "insensitive" } },
+        { address: { contains: search, mode: "insensitive" } },
+        { category: { contains: search, mode: "insensitive" } },
+      ],
+    });
+  }
+
+  if (category) {
+    conditions.push({ category });
+  }
+
+  return conditions.length > 0 ? { AND: conditions } : {};
+}
+
+export async function GET(request: Request) {
   try {
+    const where = buildRestaurantWhere(getRestaurantSearchParams(request));
     const restaurants = await prisma.restaurant.findMany({
+      where,
       orderBy: {
         createdAt: "asc",
       },
