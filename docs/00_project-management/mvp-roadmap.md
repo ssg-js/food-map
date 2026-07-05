@@ -194,3 +194,94 @@ Done
 # Status
 
 Done
+
+---
+
+# MVP 5 - Bounds Restaurant Query
+
+# Goal
+
+지도 viewport 기준으로 현재 보고 있는 영역 안의 맛집만 조회하고, 카테고리별 현재 bounds 내 결과 수를 표시한다.
+
+# Scope
+
+- `/api/restaurants?north=&south=&east=&west=&search=&category=` bounds query parameter 추가
+- Prisma 위도/경도 조건 기반 viewport 내부 맛집 조회
+- React Query query key에 bounds 포함
+- 지도 idle 또는 이동 완료 이벤트 후 bounds 갱신
+- `/api/restaurant-categories` 카테고리 옵션 endpoint 추가
+- 전체 기준 카테고리 목록과 현재 bounds 기준 `boundsCount` 제공
+- `boundsCount === 0`인 카테고리는 선택 가능하게 유지하되 흐리게 표시
+
+# Out of Scope
+
+- Google Places API 호출
+- 실제 장소 후보 검색
+- marker clustering
+- pagination
+- 날짜변경선 crossing 처리
+- 상세 페이지
+- 로그인
+- 리뷰
+- 즐겨찾기
+
+# Done Criteria
+
+- 지도 bounds가 `/api/restaurants` query parameter로 전달된다.
+- API가 bounds 내부 맛집만 반환한다.
+- 검색어, 카테고리, bounds가 함께 적용된다.
+- 카테고리 목록은 전체 기준으로 유지된다.
+- 각 카테고리에 현재 bounds 내부 결과 수가 표시된다.
+- `boundsCount === 0` 카테고리는 disabled가 아니라 흐리게 표시된다.
+- 선택된 카테고리는 bounds 내부 결과가 없어도 유지된다.
+- `npm run lint`, `npx tsc --noEmit`, `npm run build`가 통과한다.
+
+# Branch
+
+`feature/bounds-restaurant-query`
+
+# Status
+
+Planned
+
+---
+
+# MVP 6 - Place Search Integration
+
+# Goal
+
+Google Places API를 서버 Route Handler 뒤에 두고, 사용자가 실제 장소 후보를 검색해 우리 서비스의 맛집 데이터로 저장할 수 있는 기반을 만든다.
+
+# Scope
+
+- Places API 호출용 서버 Route Handler 설계
+- `/api/place-search` 장소 후보 검색 endpoint 추가
+- `/api/places/:placeId` 장소 상세 조회 endpoint 추가
+- Google Places 응답을 앱 전용 DTO로 정규화
+- 사용자가 선택한 장소를 `Restaurant`로 저장하는 흐름 설계
+- API key, 비용, rate limit, 캐싱 정책 문서화
+
+# Out of Scope
+
+- Google Places 데이터 대량 수집
+- 자동 동기화 batch
+- 사용자 인증 기반 소유권 관리
+- 리뷰
+- 즐겨찾기
+- 사진 저장 정책 확정
+
+# Done Criteria
+
+- 클라이언트는 Places API를 직접 호출하지 않는다.
+- 서버가 Google Places 후보 검색을 호출하고 정규화된 응답을 반환한다.
+- 저장 가능한 데이터와 저장하지 않을 데이터를 문서화한다.
+- Google Maps Platform API key 제한과 비용 관리 정책을 문서화한다.
+- `npm run lint`, `npx tsc --noEmit`, `npm run build`가 통과한다.
+
+# Branch
+
+`feature/place-search-integration`
+
+# Status
+
+Planned
