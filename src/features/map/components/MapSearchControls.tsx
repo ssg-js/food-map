@@ -1,5 +1,7 @@
+import type { RestaurantCategoryOption } from "../model/restaurant-filter";
+
 interface MapSearchControlsProps {
-  categories: string[];
+  categories: RestaurantCategoryOption[];
   hasActiveFilter: boolean;
   resultCount: number;
   searchTerm: string;
@@ -51,21 +53,26 @@ export function MapSearchControls({
         >
           전체
         </button>
-        {categories.map((category) => (
-          <button
-            key={category}
-            type="button"
-            className={`shrink-0 rounded-full px-3 py-1.5 text-sm font-medium transition ${
-              selectedCategory === category
-                ? "bg-orange-500 text-white"
-                : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
-            }`}
-            aria-pressed={selectedCategory === category}
-            onClick={() => onCategoryChange(category)}
-          >
-            {category}
-          </button>
-        ))}
+        {categories.map((category) => {
+          const isSelected = selectedCategory === category.name;
+          const isEmptyInBounds = category.boundsCount === 0;
+
+          return (
+            <button
+              key={category.name}
+              type="button"
+              className={`shrink-0 rounded-full px-3 py-1.5 text-sm font-medium transition ${
+                isSelected
+                  ? "bg-orange-500 text-white"
+                  : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
+              } ${isEmptyInBounds ? "opacity-45" : ""}`}
+              aria-pressed={isSelected}
+              onClick={() => onCategoryChange(category.name)}
+            >
+              {category.name} {category.boundsCount}
+            </button>
+          );
+        })}
       </div>
 
       <div className="mt-3 flex items-center justify-between gap-3 text-xs text-zinc-500 dark:text-zinc-400">

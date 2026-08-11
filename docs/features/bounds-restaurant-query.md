@@ -20,6 +20,17 @@
 
 # Implementation
 
+- `IMapProvider`에 `getBounds()`와 `idle` 이벤트를 추가했다.
+- `GoogleMapProvider`는 Google Maps `getBounds()`와 `idle` 이벤트를 사용해 viewport bounds를 전달한다.
+- `StubMapProvider`는 중심 좌표 주변의 고정 bounds를 계산해 동일한 인터페이스를 구현한다.
+- `MapContainer`는 지도 준비 시점과 idle 이벤트 이후 `onBoundsChange`로 bounds를 상위에 전달한다.
+- `MapView`는 bounds를 `RestaurantFilterState`에 저장하고 React Query 요청에 포함한다.
+- `MapView`는 bounds가 준비되기 전에는 맛집 마커 목록 query를 실행하지 않아 초기 전체 맛집 조회를 피한다.
+- `src/app/api/restaurants/query.ts`에서 search, category, bounds query parsing과 Prisma `where` 생성 로직을 공유한다.
+- `/api/restaurants`는 bounds 조건과 서버 결과 limit을 적용한다.
+- `/api/restaurant-categories`는 전체 기준 `totalCount`와 현재 bounds 기준 `boundsCount`를 반환한다.
+- `MapSearchControls`는 `boundsCount === 0`인 카테고리를 disabled 처리하지 않고 흐리게 표시한다.
+
 맛집 조회 API:
 
 ```text

@@ -8,6 +8,7 @@ import type { RestaurantFilterState } from "../model/restaurant-filter";
 const DEFAULT_RESTAURANT_FILTER: RestaurantFilterState = {
   searchTerm: "",
   selectedCategory: null,
+  bounds: null,
 };
 
 function normalizeRestaurantFilter(
@@ -16,6 +17,7 @@ function normalizeRestaurantFilter(
   return {
     searchTerm: filter.searchTerm.trim(),
     selectedCategory: filter.selectedCategory,
+    bounds: filter.bounds,
   };
 }
 
@@ -31,11 +33,13 @@ const restaurantQueryKeys = {
 
 export function useRestaurants(
   filter: RestaurantFilterState = DEFAULT_RESTAURANT_FILTER,
+  enabled = true,
 ) {
   const normalizedFilter = normalizeRestaurantFilter(filter);
 
   return useQuery({
     queryKey: restaurantQueryKeys.list(normalizedFilter),
     queryFn: () => fetchRestaurants(normalizedFilter),
+    enabled,
   });
 }

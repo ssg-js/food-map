@@ -1,14 +1,20 @@
-import type { Restaurant } from "@/entities/restaurant/type/restaurant";
+export interface RestaurantBoundsState {
+  north: number;
+  south: number;
+  east: number;
+  west: number;
+}
 
 export interface RestaurantFilterState {
   searchTerm: string;
   selectedCategory: string | null;
+  bounds: RestaurantBoundsState | null;
 }
 
-export function getRestaurantCategories(restaurants: Restaurant[]): string[] {
-  return Array.from(
-    new Set(restaurants.map((restaurant) => restaurant.category)),
-  ).sort((a, b) => a.localeCompare(b, "ko"));
+export interface RestaurantCategoryOption {
+  name: string;
+  totalCount: number;
+  boundsCount: number;
 }
 
 export function hasActiveRestaurantFilter(

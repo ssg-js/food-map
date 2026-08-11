@@ -41,6 +41,13 @@ function buildRestaurantsUrl(filter: RestaurantFilterState): string {
     searchParams.set("category", filter.selectedCategory);
   }
 
+  if (filter.bounds) {
+    searchParams.set("north", String(filter.bounds.north));
+    searchParams.set("south", String(filter.bounds.south));
+    searchParams.set("east", String(filter.bounds.east));
+    searchParams.set("west", String(filter.bounds.west));
+  }
+
   const queryString = searchParams.toString();
 
   return queryString ? `/api/restaurants?${queryString}` : "/api/restaurants";
