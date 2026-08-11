@@ -135,6 +135,15 @@ Do not immediately generate code.
 
 Always explain design decisions first.
 
+Workflow rules:
+
+- Confirm requirements and scope before implementation.
+- Check the existing project structure and documentation first.
+- Do not add features beyond the explicitly agreed scope.
+- Implement in small feature units instead of changing an entire MVP at once.
+- Propose analysis first for large structural changes or refactors, then modify only the approved scope.
+- After work, explain created/modified files, data flow, and verification results.
+
 ---
 
 # Approval Rule

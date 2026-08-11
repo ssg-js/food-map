@@ -1,4 +1,4 @@
-import type { Coordinate } from "./types";
+import type { Coordinate, MapBounds } from "./types";
 
 export interface GoogleLatLngLiteral {
   lat: number;
@@ -33,6 +33,16 @@ export interface GoogleMap {
   } | null;
   setZoom(zoom: number): void;
   getZoom(): number | undefined;
+  getBounds(): {
+    getNorthEast(): {
+      lat(): number;
+      lng(): number;
+    };
+    getSouthWest(): {
+      lat(): number;
+      lng(): number;
+    };
+  } | null;
   panTo(center: GoogleLatLngLiteral): void;
 }
 
@@ -56,7 +66,7 @@ export interface GoogleMapsApi {
   event: {
     addListener(
       target: GoogleMap,
-      eventName: "center_changed" | "zoom_changed",
+      eventName: "center_changed" | "zoom_changed" | "idle",
       handler: () => void,
     ): GoogleMapsEventListener;
     addListener(
@@ -89,5 +99,21 @@ export function fromGoogleLatLng(latLng: {
   return {
     latitude: latLng.lat(),
     longitude: latLng.lng(),
+  };
+}
+
+export function fromGoogleLatLngBounds(bounds: {
+  getNorthEast(): {
+    lat(): number;
+    lng(): number;
+  };
+  getSouthWest(): {
+    lat(): number;
+    lng(): number;
+  };
+}): MapBounds {
+  return {
+    northeast: fromGoogleLatLng(bounds.getNorthEast()),
+    southwest: fromGoogleLatLng(bounds.getSouthWest()),
   };
 }

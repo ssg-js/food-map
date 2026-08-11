@@ -3,10 +3,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useMapStore } from "@/shared/store/map-store";
-import { MapContainer, type Marker, type MarkerClickEvent } from "@/widgets/map";
+import {
+  MapContainer,
+  type MapBounds,
+  type Marker,
+  type MarkerClickEvent,
+} from "@/widgets/map";
 
 import { useContainerSize } from "../hooks/useContainerSize";
 import { useCurrentLocation } from "../hooks/useCurrentLocation";
+import { useRestaurantCategories } from "../hooks/useRestaurantCategories";
 import { useRestaurants } from "../hooks/useRestaurants";
 import { MapCurrentLocationButton } from "./MapCurrentLocationButton";
 import { MapEmptyState } from "./MapEmptyState";
@@ -14,8 +20,8 @@ import { MapSearchControls } from "./MapSearchControls";
 import { RestaurantBottomSheet } from "./RestaurantBottomSheet";
 import { UserLocationMarker } from "./UserLocationMarker";
 import {
-  getRestaurantCategories,
   hasActiveRestaurantFilter,
+  type RestaurantBoundsState,
   type RestaurantFilterState,
 } from "../model/restaurant-filter";
 
@@ -45,6 +51,28 @@ function LocationStatusBanner({
 
 type MapLoadStatus = "loading" | "ready" | "error";
 
+function normalizeBounds(bounds: MapBounds): RestaurantBoundsState {
+  return {
+    north: Number(bounds.northeast.latitude.toFixed(6)),
+    south: Number(bounds.southwest.latitude.toFixed(6)),
+    east: Number(bounds.northeast.longitude.toFixed(6)),
+    west: Number(bounds.southwest.longitude.toFixed(6)),
+  };
+}
+
+function areBoundsEqual(
+  currentBounds: RestaurantBoundsState | null,
+  nextBounds: RestaurantBoundsState,
+): boolean {
+  return (
+    currentBounds !== null &&
+    currentBounds.north === nextBounds.north &&
+    currentBounds.south === nextBounds.south &&
+    currentBounds.east === nextBounds.east &&
+    currentBounds.west === nextBounds.west
+  );
+}
+
 export function MapView() {
   const containerRef = useRef<HTMLDivElement>(null);
   const containerSize = useContainerSize(containerRef);
@@ -53,25 +81,30 @@ export function MapView() {
   const [filter, setFilter] = useState<RestaurantFilterState>({
     searchTerm: "",
     selectedCategory: null,
+    bounds: null,
   });
   const {
     data: restaurants = [],
     error: restaurantsError,
     isError: isRestaurantsError,
     isPending: isRestaurantsPending,
-  } = useRestaurants(filter);
-  const { data: allRestaurants = [] } = useRestaurants();
+  } = useRestaurants(filter, filter.bounds !== null);
+  const { data: categories = [] } = useRestaurantCategories(filter);
   const [selectedRestaurantId, setSelectedRestaurantId] = useState<
     string | null
   >(null);
   const [mapLoadStatus, setMapLoadStatus] =
     useState<MapLoadStatus>("loading");
   const [mapErrorMessage, setMapErrorMessage] = useState<string | null>(null);
-  const categories = useMemo(
-    () => getRestaurantCategories(allRestaurants),
-    [allRestaurants],
-  );
   const hasActiveFilter = hasActiveRestaurantFilter(filter);
+  const totalCount = useMemo(
+    () =>
+      categories.reduce(
+        (sum, category) => sum + category.totalCount,
+        0,
+      ),
+    [categories],
+  );
   const markers = useMemo<Marker[]>(
     () =>
       restaurants.map((restaurant) => ({
@@ -126,8 +159,9 @@ export function MapView() {
     updateFilter({
       searchTerm: "",
       selectedCategory: null,
+      bounds: filter.bounds,
     });
-  }, [updateFilter]);
+  }, [filter.bounds, updateFilter]);
 
   const handleMoveToCurrentLocation = useCallback(() => {
     if (!position) return;
@@ -145,6 +179,21 @@ export function MapView() {
     setMapErrorMessage(error.message);
   }, []);
 
+  const handleBoundsChange = useCallback((bounds: MapBounds) => {
+    const nextBounds = normalizeBounds(bounds);
+
+    setFilter((currentFilter) => {
+      if (areBoundsEqual(currentFilter.bounds, nextBounds)) {
+        return currentFilter;
+      }
+
+      return {
+        ...currentFilter,
+        bounds: nextBounds,
+      };
+    });
+  }, []);
+
   useEffect(() => {
     if (!position) return;
     setCenter(position.latitude, position.longitude);
@@ -156,7 +205,7 @@ export function MapView() {
     !isRestaurantsPending &&
     !isRestaurantsError &&
     hasActiveFilter &&
-    allRestaurants.length > 0 &&
+    totalCount > 0 &&
     restaurants.length === 0;
   const statusBanner = useMemo(() => {
     if (mapLoadStatus === "error") {
@@ -226,6 +275,7 @@ export function MapView() {
       <MapContainer
         className="absolute inset-0 h-full w-full bg-zinc-200 dark:bg-zinc-800"
         markers={markers}
+        onBoundsChange={handleBoundsChange}
         onMapError={handleMapError}
         onMapReady={handleMapReady}
         onMarkerClick={handleMarkerClick}
@@ -237,7 +287,7 @@ export function MapView() {
         resultCount={restaurants.length}
         searchTerm={filter.searchTerm}
         selectedCategory={filter.selectedCategory}
-        totalCount={allRestaurants.length}
+        totalCount={totalCount}
         onCategoryChange={handleCategoryChange}
         onReset={handleResetFilter}
         onSearchTermChange={handleSearchTermChange}

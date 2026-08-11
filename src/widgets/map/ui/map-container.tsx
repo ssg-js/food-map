@@ -6,7 +6,7 @@ import { useMapStore } from "@/shared/store/map-store";
 
 import { useMapContext } from "../model/map-context";
 import type { Marker } from "../model/marker";
-import type { Coordinate, MarkerClickEvent } from "../model/types";
+import type { Coordinate, MapBounds, MarkerClickEvent } from "../model/types";
 
 interface MapContainerProps {
   className?: string;
@@ -14,6 +14,7 @@ interface MapContainerProps {
   onMapClick?: (coordinate: Coordinate) => void;
   onMapError?: (error: Error) => void;
   onMapReady?: () => void;
+  onBoundsChange?: (bounds: MapBounds) => void;
   onMarkerClick?: (event: MarkerClickEvent) => void;
 }
 
@@ -23,6 +24,7 @@ export function MapContainer({
   onMapClick,
   onMapError,
   onMapReady,
+  onBoundsChange,
   onMarkerClick,
 }: MapContainerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -62,6 +64,10 @@ export function MapContainer({
       provider.setZoom(latestZoom);
       isInitializedRef.current = true;
       setIsInitialized(true);
+      const bounds = provider.getBounds();
+      if (bounds) {
+        onBoundsChange?.(bounds);
+      }
       onMapReady?.();
     }).catch((error: unknown) => {
       if (!isActive) return;
@@ -92,7 +98,7 @@ export function MapContainer({
       isInitializedRef.current = false;
       setIsInitialized(false);
     };
-  }, [onMapError, onMapReady, provider, setCenter, setZoom]);
+  }, [onBoundsChange, onMapError, onMapReady, provider, setCenter, setZoom]);
 
   useEffect(() => {
     if (!isInitialized || !provider.isInitialized()) return;
@@ -133,6 +139,13 @@ export function MapContainer({
     provider.on("click", handleClick);
     return () => provider.off("click", handleClick);
   }, [isInitialized, onMapClick, provider]);
+
+  useEffect(() => {
+    if (!isInitialized || !provider.isInitialized() || !onBoundsChange) return;
+
+    provider.on("idle", onBoundsChange);
+    return () => provider.off("idle", onBoundsChange);
+  }, [isInitialized, onBoundsChange, provider]);
 
   useEffect(() => {
     if (!isInitialized || !provider.isInitialized() || !onMarkerClick) return;

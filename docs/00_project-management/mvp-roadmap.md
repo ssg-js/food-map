@@ -242,7 +242,7 @@ Done
 
 # Status
 
-Planned
+Done
 
 ---
 

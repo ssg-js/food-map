@@ -15,7 +15,12 @@ export interface MapInitOptions {
   maxZoom?: number;
 }
 
-export type MapEvent = "center_changed" | "zoom_changed" | "click" | "marker_click";
+export type MapEvent =
+  | "center_changed"
+  | "zoom_changed"
+  | "idle"
+  | "click"
+  | "marker_click";
 
 export interface MapClickEvent {
   coordinate: Coordinate;
@@ -29,6 +34,7 @@ export interface MarkerClickEvent {
 export type MapEventPayload = {
   center_changed: Coordinate;
   zoom_changed: number;
+  idle: MapBounds;
   click: MapClickEvent;
   marker_click: MarkerClickEvent;
 };

@@ -8,11 +8,13 @@ import type {
   GoogleMarker,
 } from "./google-maps-types";
 import {
+  fromGoogleLatLngBounds,
   fromGoogleLatLng,
   toGoogleLatLng,
 } from "./google-maps-types";
 import type {
   Coordinate,
+  MapBounds,
   MapEvent,
   MapEventHandler,
   MapEventPayload,
@@ -39,6 +41,7 @@ export class GoogleMapProvider implements IMapProvider {
   private handlers: EventHandlerMap = {
     center_changed: new Set(),
     zoom_changed: new Set(),
+    idle: new Set(),
     click: new Set(),
     marker_click: new Set(),
   };
@@ -101,6 +104,12 @@ export class GoogleMapProvider implements IMapProvider {
 
   getZoom(): number {
     return this.map?.getZoom() ?? this.zoom;
+  }
+
+  getBounds(): MapBounds | null {
+    const bounds = this.map?.getBounds();
+
+    return bounds ? fromGoogleLatLngBounds(bounds) : null;
   }
 
   panTo(center: Coordinate): void {
@@ -190,6 +199,12 @@ export class GoogleMapProvider implements IMapProvider {
         const zoom = this.getZoom();
         this.zoom = zoom;
         this.emit("zoom_changed", zoom);
+      }),
+      this.googleMaps.event.addListener(this.map, "idle", () => {
+        const bounds = this.getBounds();
+        if (!bounds) return;
+
+        this.emit("idle", bounds);
       }),
       this.googleMaps.event.addListener(this.map, "click", (event) => {
         if (!event.latLng) return;

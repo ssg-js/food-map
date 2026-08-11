@@ -2,6 +2,7 @@ import type { Marker } from "./marker";
 import type { IMapProvider } from "./map-provider";
 import type {
   Coordinate,
+  MapBounds,
   MapEvent,
   MapEventHandler,
   MapInitOptions,
@@ -24,6 +25,7 @@ export class StubMapProvider implements IMapProvider {
   private handlers: EventHandlerMap = {
     center_changed: new Set(),
     zoom_changed: new Set(),
+    idle: new Set(),
     click: new Set(),
     marker_click: new Set(),
   };
@@ -53,6 +55,7 @@ export class StubMapProvider implements IMapProvider {
   setCenter(center: Coordinate): void {
     this.center = center;
     this.emit("center_changed", center);
+    this.emit("idle", this.getBounds());
   }
 
   getCenter(): Coordinate {
@@ -62,10 +65,27 @@ export class StubMapProvider implements IMapProvider {
   setZoom(zoom: number): void {
     this.zoom = zoom;
     this.emit("zoom_changed", zoom);
+    this.emit("idle", this.getBounds());
   }
 
   getZoom(): number {
     return this.zoom;
+  }
+
+  getBounds(): MapBounds {
+    const latitudeOffset = 0.03;
+    const longitudeOffset = 0.03;
+
+    return {
+      southwest: {
+        latitude: this.center.latitude - latitudeOffset,
+        longitude: this.center.longitude - longitudeOffset,
+      },
+      northeast: {
+        latitude: this.center.latitude + latitudeOffset,
+        longitude: this.center.longitude + longitudeOffset,
+      },
+    };
   }
 
   panTo(center: Coordinate): void {

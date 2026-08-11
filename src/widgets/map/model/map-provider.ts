@@ -3,6 +3,7 @@ import type {
   Coordinate,
   MapEvent,
   MapEventHandler,
+  MapBounds,
   MapInitOptions,
 } from "./types";
 
@@ -22,6 +23,7 @@ export interface IMapProvider {
   getCenter(): Coordinate;
   setZoom(zoom: number): void;
   getZoom(): number;
+  getBounds(): MapBounds | null;
   panTo(center: Coordinate): void;
 
   addMarker(marker: Marker): void;
