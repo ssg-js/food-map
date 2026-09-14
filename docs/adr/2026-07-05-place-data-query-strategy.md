@@ -59,8 +59,10 @@ Google Places API는 “장소 후보 검색”과 “선택한 장소 상세 �
 맛집 조회:
 
 ```text
-GET /api/restaurants?north=&south=&east=&west=&search=&category=
+GET /api/restaurants
 ```
+
+MVP 7에서 `Restaurant`가 좌표를 저장하지 않게 되면서 bounds/search/category query parameter는 제거되었다. 저장된 맛집을 지도에 표시하려면 좌표 캐시 전략을 먼저 확정해야 한다.
 
 장소 후보 검색:
 

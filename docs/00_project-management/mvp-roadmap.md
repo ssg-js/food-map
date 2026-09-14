@@ -242,7 +242,9 @@ Done
 
 # Status
 
-Done
+Superseded
+
+MVP 7에서 `Restaurant`가 좌표를 저장하지 않는 모델로 바뀌면서 bounds 조회와 `/api/restaurant-categories`는 제거되었다. 저장된 맛집을 지도에 표시하려면 좌표 캐시 전략을 먼저 정해야 한다.
 
 ---
 
@@ -290,6 +292,49 @@ Google Places Text Search (New)를 서버 Route Handler 뒤에서 호출하고, 
 # Branch
 
 `feature/places-search-validation`
+
+# Status
+
+Done
+
+---
+
+# MVP 7 - Place Registration & Categories
+
+# Goal
+
+검색한 Google 장소를 우리 서비스의 맛집으로 등록하고, 우리가 관리하는 복수 카테고리를 연결한다.
+
+# Scope
+
+- `Restaurant`를 `googlePlaceId`만 저장하는 최소 모델로 변경
+- `Category`, `RestaurantCategory` 모델 추가
+- `GET /api/categories`, `POST /api/categories` 추가
+- `POST /api/restaurants` 등록 endpoint 추가
+- 저장 transaction과 중복 방지 처리
+- 검색 → 후보 선택 → 카테고리 선택/생성 → 저장 UI 연결
+
+# Out of Scope
+
+- 위도/경도 영구 저장
+- `GooglePlaceCache` 구현
+- Place Details API
+- 지도에 저장된 맛집 표시
+- 사용자 인증
+- 즐겨찾기, 리뷰, 사진
+- Redis, DB 기반 rate limiter
+
+# Done Criteria
+
+- `Restaurant`는 Google 장소 상세 정보를 저장하지 않는다.
+- 같은 `googlePlaceId`로 맛집이 중복 생성되지 않는다.
+- 전달한 `categoryIds`가 맛집의 최종 카테고리 집합이 된다.
+- 중복 카테고리 이름 생성이 차단된다.
+- `npm run lint`, `npx tsc --noEmit`, `npm run build`가 통과한다.
+
+# Branch
+
+`feature/place-registration-categories`
 
 # Status
 

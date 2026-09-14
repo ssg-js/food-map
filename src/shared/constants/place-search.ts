@@ -1,0 +1,1 @@
+export const MIN_PLACE_SEARCH_QUERY_LENGTH = 2;

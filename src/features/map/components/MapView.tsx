@@ -3,27 +3,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useMapStore } from "@/shared/store/map-store";
-import {
-  MapContainer,
-  type MapBounds,
-  type Marker,
-  type MarkerClickEvent,
-} from "@/widgets/map";
+import { MapContainer } from "@/widgets/map";
 
 import { useContainerSize } from "../hooks/useContainerSize";
 import { useCurrentLocation } from "../hooks/useCurrentLocation";
-import { useRestaurantCategories } from "../hooks/useRestaurantCategories";
-import { useRestaurants } from "../hooks/useRestaurants";
 import { MapCurrentLocationButton } from "./MapCurrentLocationButton";
-import { MapEmptyState } from "./MapEmptyState";
-import { MapSearchControls } from "./MapSearchControls";
-import { RestaurantBottomSheet } from "./RestaurantBottomSheet";
 import { UserLocationMarker } from "./UserLocationMarker";
-import {
-  hasActiveRestaurantFilter,
-  type RestaurantBoundsState,
-  type RestaurantFilterState,
-} from "../model/restaurant-filter";
 
 function LocationStatusBanner({
   message,
@@ -41,7 +26,7 @@ function LocationStatusBanner({
 
   return (
     <div
-      className={`absolute left-4 right-4 top-44 z-50 rounded-lg px-4 py-2 text-sm shadow-md ${styles[variant]}`}
+      className={`absolute bottom-24 left-4 right-4 z-30 rounded-lg px-4 py-2 text-sm shadow-md ${styles[variant]}`}
       role="status"
     >
       {message}
@@ -51,117 +36,13 @@ function LocationStatusBanner({
 
 type MapLoadStatus = "loading" | "ready" | "error";
 
-function normalizeBounds(bounds: MapBounds): RestaurantBoundsState {
-  return {
-    north: Number(bounds.northeast.latitude.toFixed(6)),
-    south: Number(bounds.southwest.latitude.toFixed(6)),
-    east: Number(bounds.northeast.longitude.toFixed(6)),
-    west: Number(bounds.southwest.longitude.toFixed(6)),
-  };
-}
-
-function areBoundsEqual(
-  currentBounds: RestaurantBoundsState | null,
-  nextBounds: RestaurantBoundsState,
-): boolean {
-  return (
-    currentBounds !== null &&
-    currentBounds.north === nextBounds.north &&
-    currentBounds.south === nextBounds.south &&
-    currentBounds.east === nextBounds.east &&
-    currentBounds.west === nextBounds.west
-  );
-}
-
 export function MapView() {
   const containerRef = useRef<HTMLDivElement>(null);
   const containerSize = useContainerSize(containerRef);
   const { status, position, errorMessage } = useCurrentLocation();
   const { latitude, longitude, zoom, setCenter } = useMapStore();
-  const [filter, setFilter] = useState<RestaurantFilterState>({
-    searchTerm: "",
-    selectedCategory: null,
-    bounds: null,
-  });
-  const {
-    data: restaurants = [],
-    error: restaurantsError,
-    isError: isRestaurantsError,
-    isPending: isRestaurantsPending,
-  } = useRestaurants(filter, filter.bounds !== null);
-  const { data: categories = [] } = useRestaurantCategories(filter);
-  const [selectedRestaurantId, setSelectedRestaurantId] = useState<
-    string | null
-  >(null);
-  const [mapLoadStatus, setMapLoadStatus] =
-    useState<MapLoadStatus>("loading");
+  const [mapLoadStatus, setMapLoadStatus] = useState<MapLoadStatus>("loading");
   const [mapErrorMessage, setMapErrorMessage] = useState<string | null>(null);
-  const hasActiveFilter = hasActiveRestaurantFilter(filter);
-  const totalCount = useMemo(
-    () =>
-      categories.reduce(
-        (sum, category) => sum + category.totalCount,
-        0,
-      ),
-    [categories],
-  );
-  const markers = useMemo<Marker[]>(
-    () =>
-      restaurants.map((restaurant) => ({
-        id: restaurant.id,
-        coordinate: {
-          latitude: restaurant.latitude,
-          longitude: restaurant.longitude,
-        },
-        title: restaurant.name,
-        description: restaurant.description,
-      })),
-    [restaurants],
-  );
-  const selectedRestaurant = useMemo(
-    () =>
-      restaurants.find(
-        (restaurant) => restaurant.id === selectedRestaurantId,
-      ) ?? null,
-    [restaurants, selectedRestaurantId],
-  );
-
-  const handleMarkerClick = useCallback((event: MarkerClickEvent) => {
-    setSelectedRestaurantId(event.markerId);
-  }, []);
-
-  const updateFilter = useCallback(
-    (nextFilter: RestaurantFilterState) => {
-      setFilter(nextFilter);
-
-      if (selectedRestaurantId) {
-        setSelectedRestaurantId(null);
-      }
-    },
-    [selectedRestaurantId],
-  );
-
-  const handleSearchTermChange = useCallback(
-    (searchTerm: string) => {
-      updateFilter({ ...filter, searchTerm });
-    },
-    [filter, updateFilter],
-  );
-
-  const handleCategoryChange = useCallback(
-    (selectedCategory: string | null) => {
-      updateFilter({ ...filter, selectedCategory });
-    },
-    [filter, updateFilter],
-  );
-
-  const handleResetFilter = useCallback(() => {
-    updateFilter({
-      searchTerm: "",
-      selectedCategory: null,
-      bounds: filter.bounds,
-    });
-  }, [filter.bounds, updateFilter]);
 
   const handleMoveToCurrentLocation = useCallback(() => {
     if (!position) return;
@@ -179,21 +60,6 @@ export function MapView() {
     setMapErrorMessage(error.message);
   }, []);
 
-  const handleBoundsChange = useCallback((bounds: MapBounds) => {
-    const nextBounds = normalizeBounds(bounds);
-
-    setFilter((currentFilter) => {
-      if (areBoundsEqual(currentFilter.bounds, nextBounds)) {
-        return currentFilter;
-      }
-
-      return {
-        ...currentFilter,
-        bounds: nextBounds,
-      };
-    });
-  }, []);
-
   useEffect(() => {
     if (!position) return;
     setCenter(position.latitude, position.longitude);
@@ -201,12 +67,6 @@ export function MapView() {
 
   const center = { latitude, longitude };
   const isMapReady = containerSize.width > 0 && containerSize.height > 0;
-  const showEmptyState =
-    !isRestaurantsPending &&
-    !isRestaurantsError &&
-    hasActiveFilter &&
-    totalCount > 0 &&
-    restaurants.length === 0;
   const statusBanner = useMemo(() => {
     if (mapLoadStatus === "error") {
       return {
@@ -214,13 +74,6 @@ export function MapView() {
         message:
           mapErrorMessage ??
           "지도를 불러오지 못했습니다. API key 또는 네트워크 상태를 확인해주세요.",
-      };
-    }
-
-    if (isRestaurantsError) {
-      return {
-        variant: "error" as const,
-        message: restaurantsError.message,
       };
     }
 
@@ -245,13 +98,6 @@ export function MapView() {
       };
     }
 
-    if (isRestaurantsPending) {
-      return {
-        variant: "loading" as const,
-        message: "맛집 목록을 불러오는 중입니다...",
-      };
-    }
-
     if (status === "requesting" || status === "idle") {
       return {
         variant: "loading" as const,
@@ -260,37 +106,14 @@ export function MapView() {
     }
 
     return null;
-  }, [
-    errorMessage,
-    isRestaurantsError,
-    isRestaurantsPending,
-    mapErrorMessage,
-    mapLoadStatus,
-    restaurantsError,
-    status,
-  ]);
+  }, [errorMessage, mapErrorMessage, mapLoadStatus, status]);
 
   return (
     <div ref={containerRef} className="relative flex-1 min-h-0 w-full">
       <MapContainer
         className="absolute inset-0 h-full w-full bg-zinc-200 dark:bg-zinc-800"
-        markers={markers}
-        onBoundsChange={handleBoundsChange}
         onMapError={handleMapError}
         onMapReady={handleMapReady}
-        onMarkerClick={handleMarkerClick}
-      />
-
-      <MapSearchControls
-        categories={categories}
-        hasActiveFilter={hasActiveFilter}
-        resultCount={restaurants.length}
-        searchTerm={filter.searchTerm}
-        selectedCategory={filter.selectedCategory}
-        totalCount={totalCount}
-        onCategoryChange={handleCategoryChange}
-        onReset={handleResetFilter}
-        onSearchTermChange={handleSearchTermChange}
       />
 
       {isMapReady && position && status === "success" && (
@@ -309,16 +132,9 @@ export function MapView() {
         />
       )}
 
-      {showEmptyState && <MapEmptyState onReset={handleResetFilter} />}
-
       <MapCurrentLocationButton
         isDisabled={!position || status !== "success"}
         onClick={handleMoveToCurrentLocation}
-      />
-
-      <RestaurantBottomSheet
-        restaurant={selectedRestaurant}
-        onClose={() => setSelectedRestaurantId(null)}
       />
     </div>
   );

@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 
+import type { PlaceSearchResult } from "@/entities/place/type/place";
+import { MIN_PLACE_SEARCH_QUERY_LENGTH } from "@/shared/constants/place-search";
+
 const GOOGLE_PLACES_TEXT_SEARCH_URL =
   "https://places.googleapis.com/v1/places:searchText";
 const GOOGLE_PLACES_FIELD_MASK =
   "places.id,places.displayName.text,places.formattedAddress";
-const MIN_PLACE_SEARCH_QUERY_LENGTH = 2;
 
 interface GooglePlaceTextSearchResponse {
   places?: GooglePlace[];
@@ -18,12 +20,6 @@ interface GooglePlace {
   formattedAddress?: string;
 }
 
-interface PlaceSearchResultDto {
-  placeId: string;
-  name: string;
-  address: string;
-}
-
 function getSearchQuery(request: Request): string {
   const { searchParams } = new URL(request.url);
 
@@ -34,9 +30,7 @@ function isGooglePlacesEnabled(): boolean {
   return process.env.GOOGLE_PLACES_ENABLED === "true";
 }
 
-function toPlaceSearchResultDto(
-  place: GooglePlace,
-): PlaceSearchResultDto | null {
+function toPlaceSearchResult(place: GooglePlace): PlaceSearchResult | null {
   const placeId = place.id?.trim();
   const name = place.displayName?.text?.trim();
   const address = place.formattedAddress?.trim();
@@ -54,10 +48,10 @@ function toPlaceSearchResultDto(
 
 function parseGooglePlacesResponse(
   value: GooglePlaceTextSearchResponse,
-): PlaceSearchResultDto[] {
+): PlaceSearchResult[] {
   return (value.places ?? [])
-    .map(toPlaceSearchResultDto)
-    .filter((place): place is PlaceSearchResultDto => place !== null);
+    .map(toPlaceSearchResult)
+    .filter((place): place is PlaceSearchResult => place !== null);
 }
 
 export async function GET(request: Request) {
@@ -65,7 +59,9 @@ export async function GET(request: Request) {
 
   if (query.length < MIN_PLACE_SEARCH_QUERY_LENGTH) {
     return NextResponse.json(
-      { message: "검색어를 2자 이상 입력해주세요." },
+      {
+        message: `검색어를 ${MIN_PLACE_SEARCH_QUERY_LENGTH}자 이상 입력해주세요.`,
+      },
       { status: 400 },
     );
   }

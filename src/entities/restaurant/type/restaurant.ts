@@ -1,10 +1,7 @@
+import type { Category } from "@/entities/category/type/category";
+
 export interface Restaurant {
   id: string;
-  name: string;
-  address: string;
-  category: string;
-  latitude: number;
-  longitude: number;
-  rating: number;
-  description: string;
+  googlePlaceId: string;
+  categories: Category[];
 }

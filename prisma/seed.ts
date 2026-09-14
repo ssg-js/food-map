@@ -1,19 +1,19 @@
 import { PrismaClient } from "@prisma/client";
 
-import { SEED_RESTAURANTS } from "./seed-data/restaurants";
+import { SEED_CATEGORIES } from "./seed-data/categories";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  for (const restaurant of SEED_RESTAURANTS) {
-    await prisma.restaurant.upsert({
-      where: { id: restaurant.id },
-      update: restaurant,
-      create: restaurant,
+  for (const name of SEED_CATEGORIES) {
+    await prisma.category.upsert({
+      where: { name },
+      update: {},
+      create: { name },
     });
   }
 
-  console.log(`Seeded ${SEED_RESTAURANTS.length} restaurants.`);
+  console.log(`Seeded ${SEED_CATEGORIES.length} categories.`);
 }
 
 main()

@@ -14,17 +14,29 @@ datasource db {
 }
 
 model Restaurant {
-  id          String   @id
-  name        String
-  address     String
-  category    String
-  latitude    Float
-  longitude   Float
-  rating      Float
-  description String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String   @id @default(cuid())
+  googlePlaceId String   @unique
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  @@index([category])
-  @@index([latitude, longitude])
+  categories RestaurantCategory[]
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+
+  restaurants RestaurantCategory[]
+}
+
+model RestaurantCategory {
+  restaurantId String
+  categoryId   String
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  category   Category   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([restaurantId, categoryId])
+  @@index([categoryId])
 }
