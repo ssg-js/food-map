@@ -65,7 +65,7 @@ GET /api/restaurants?north=&south=&east=&west=&search=&category=
 장소 후보 검색:
 
 ```text
-GET /api/place-search?query=&north=&south=&east=&west=
+GET /api/places/search?q=
 ```
 
 장소 상세 조회:

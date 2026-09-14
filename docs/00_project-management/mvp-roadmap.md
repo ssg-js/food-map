@@ -246,42 +246,51 @@ Done
 
 ---
 
-# MVP 6 - Place Search Integration
+# MVP 6 - Place Search Validation
 
 # Goal
 
-Google Places API를 서버 Route Handler 뒤에 두고, 사용자가 실제 장소 후보를 검색해 우리 서비스의 맛집 데이터로 저장할 수 있는 기반을 만든다.
+Google Places Text Search (New)를 서버 Route Handler 뒤에서 호출하고, 앱 전용 DTO로 정규화되는지 검증한다.
 
 # Scope
 
-- Places API 호출용 서버 Route Handler 설계
-- `/api/place-search` 장소 후보 검색 endpoint 추가
-- `/api/places/:placeId` 장소 상세 조회 endpoint 추가
+- Places API 호출용 서버 Route Handler 추가
+- `/api/places/search?q=` 장소 후보 검색 endpoint 추가
 - Google Places 응답을 앱 전용 DTO로 정규화
-- 사용자가 선택한 장소를 `Restaurant`로 저장하는 흐름 설계
-- API key, 비용, rate limit, 캐싱 정책 문서화
+- 서버 전용 `GOOGLE_PLACES_API_KEY`, `GOOGLE_PLACES_ENABLED` 사용
+- 최소 FieldMask로 `placeId`, `name`, `address`만 반환
+- Places disabled, 빈 검색어, Google API 오류 처리
 
 # Out of Scope
 
+- Restaurant INSERT
+- Prisma schema 변경
+- `placeId` DB 저장
+- Place Details API
+- Autocomplete
+- 검색 UI 완성
 - Google Places 데이터 대량 수집
 - 자동 동기화 batch
-- 사용자 인증 기반 소유권 관리
+- DB 기반 rate limiter
+- Redis
 - 리뷰
 - 즐겨찾기
-- 사진 저장 정책 확정
+- 사진
+- 캐싱
 
 # Done Criteria
 
 - 클라이언트는 Places API를 직접 호출하지 않는다.
-- 서버가 Google Places 후보 검색을 호출하고 정규화된 응답을 반환한다.
-- 저장 가능한 데이터와 저장하지 않을 데이터를 문서화한다.
-- Google Maps Platform API key 제한과 비용 관리 정책을 문서화한다.
+- 서버가 Google Places Text Search (New)를 호출하고 정규화된 응답을 반환한다.
+- 반환 DTO는 `placeId`, `name`, `address`만 포함한다.
+- Google 원본 응답 구조와 API key가 클라이언트에 노출되지 않는다.
+- `GOOGLE_PLACES_ENABLED=false`이면 Google API를 호출하지 않는다.
 - `npm run lint`, `npx tsc --noEmit`, `npm run build`가 통과한다.
 
 # Branch
 
-`feature/place-search-integration`
+`feature/places-search-validation`
 
 # Status
 
-Planned
+Done
