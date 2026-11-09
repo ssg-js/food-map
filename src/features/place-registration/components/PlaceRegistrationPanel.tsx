@@ -1,256 +1,319 @@
 "use client";
-
-import { useCallback, useState, type FormEvent } from "react";
-
-import type { PlaceSearchResult } from "@/entities/place/type/place";
-import { MIN_PLACE_SEARCH_QUERY_LENGTH } from "@/shared/constants/place-search";
-
-import { useCategories } from "../hooks/useCategories";
-import { useCreateCategory } from "../hooks/useCreateCategory";
-import { usePlaceSearch } from "../hooks/usePlaceSearch";
-import { useSaveRestaurant } from "../hooks/useSaveRestaurant";
-
-function toErrorMessage(error: unknown, fallbackMessage: string): string {
-  return error instanceof Error ? error.message : fallbackMessage;
-}
-
-export function PlaceRegistrationPanel() {
-  const [searchInput, setSearchInput] = useState("");
-  const [submittedQuery, setSubmittedQuery] = useState("");
-  const [selectedPlace, setSelectedPlace] = useState<PlaceSearchResult | null>(
-    null,
-  );
-  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
-  const [newCategoryName, setNewCategoryName] = useState("");
-
-  const placeSearch = usePlaceSearch(submittedQuery);
-  const categories = useCategories();
-  const createCategory = useCreateCategory();
-  const saveRestaurant = useSaveRestaurant();
-
-  const handleSearchSubmit = useCallback(
-    (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault();
-      setSubmittedQuery(searchInput.trim());
-      setSelectedPlace(null);
-      saveRestaurant.reset();
-    },
-    [saveRestaurant, searchInput],
-  );
-
-  const handleSelectPlace = useCallback(
-    (place: PlaceSearchResult) => {
-      setSelectedPlace(place);
-      setSelectedCategoryIds([]);
-      saveRestaurant.reset();
-    },
-    [saveRestaurant],
-  );
-
-  const handleToggleCategory = useCallback((categoryId: string) => {
-    setSelectedCategoryIds((currentIds) =>
-      currentIds.includes(categoryId)
-        ? currentIds.filter((id) => id !== categoryId)
-        : [...currentIds, categoryId],
-    );
-  }, []);
-
-  const handleCreateCategory = useCallback(() => {
-    const name = newCategoryName.trim();
-    if (!name) return;
-
-    createCategory.mutate(name, {
-      onSuccess: (category) => {
-        setNewCategoryName("");
-        setSelectedCategoryIds((currentIds) =>
-          currentIds.includes(category.id)
-            ? currentIds
-            : [...currentIds, category.id],
-        );
-      },
-    });
-  }, [createCategory, newCategoryName]);
-
-  const handleSaveRestaurant = useCallback(() => {
-    if (!selectedPlace) return;
-
-    saveRestaurant.mutate({
-      googlePlaceId: selectedPlace.placeId,
-      categoryIds: selectedCategoryIds,
-    });
-  }, [saveRestaurant, selectedCategoryIds, selectedPlace]);
-
+import { useRef } from "react";
+import {
+  createRegistrationApi,
+  MAX_CATEGORY_LENGTH,
+  MIN_SEARCH_LENGTH,
+  useRegistration,
+} from "@food-map/registration";
+import { Icon } from "@/shared/ui/icon";
+import { PlaceCandidateRow } from "./PlaceCandidateRow";
+import { RegistrationSteps } from "./RegistrationSteps";
+const api = createRegistrationApi();
+function ErrorMessage({
+  message,
+  onRetry,
+}: {
+  message: string;
+  onRetry?: () => void;
+}) {
   return (
-    <section className="absolute left-4 right-4 top-4 z-50 max-h-[calc(100%-2rem)] overflow-y-auto rounded-2xl bg-white/95 p-4 shadow-lg backdrop-blur dark:bg-zinc-900/95">
-      <form onSubmit={handleSearchSubmit}>
-        <label
-          htmlFor="place-search"
-          className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-200"
-        >
-          장소 검색
-        </label>
-        <div className="flex gap-2">
-          <input
-            id="place-search"
-            type="search"
-            value={searchInput}
-            onChange={(event) => setSearchInput(event.target.value)}
-            placeholder={`${MIN_PLACE_SEARCH_QUERY_LENGTH}자 이상 입력 후 검색`}
-            className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 outline-none transition focus:border-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50 dark:focus:border-zinc-100"
-          />
+    <div className="feedback feedback-error" role="alert">
+      <Icon name="info" />
+      <span>{message}</span>
+      {onRetry && (
+        <button type="button" className="text-button" onClick={onRetry}>
+          다시 시도
+        </button>
+      )}
+    </div>
+  );
+}
+export function PlaceRegistrationPanel() {
+  const flow = useRegistration(api);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const step = flow.save.isSuccess ? 3 : flow.selectedPlace ? 2 : 1;
+  return (
+    <section
+      className="registration-panel"
+      aria-labelledby="registration-title"
+      id="registration"
+    >
+      <div className="panel-handle" aria-hidden="true" />
+      <div className="panel-heading">
+        <p className="eyebrow">나만의 발견, 함께 쓰는 맛집지도</p>
+        <h1 id="registration-title">맛집 등록</h1>
+        <p className="panel-description">발견한 맛집을 카테고리로 정리해요.</p>
+      </div>
+      <RegistrationSteps step={step} />
+      <form
+        className="place-search-form"
+        onSubmit={(event) => {
+          event.preventDefault();
+          flow.submitSearch();
+        }}
+        role="search"
+        aria-label="맛집 장소 검색"
+      >
+        <label htmlFor="place-search">장소 검색</label>
+        <div className="input-row">
+          <div className="search-field">
+            <Icon name="search" />
+            <input
+              id="place-search"
+              ref={searchRef}
+              type="search"
+              value={flow.searchInput}
+              disabled={flow.busy}
+              onChange={(event) => flow.setSearchInput(event.target.value)}
+              placeholder="지역 또는 맛집 이름"
+              autoComplete="off"
+              aria-describedby="search-help"
+              maxLength={200}
+            />
+          </div>
           <button
             type="submit"
-            disabled={searchInput.trim().length < MIN_PLACE_SEARCH_QUERY_LENGTH}
-            className="shrink-0 rounded-xl bg-zinc-900 px-4 py-3 text-sm font-medium text-white transition disabled:opacity-40 dark:bg-zinc-100 dark:text-zinc-950"
+            className="button button-primary search-submit"
+            disabled={!flow.canSearch}
           >
-            검색
+            {flow.search.isFetching ? (
+              <span className="spinner" aria-label="검색 중" />
+            ) : (
+              "검색"
+            )}
           </button>
         </div>
+        <p className="field-help" id="search-help">
+          {MIN_SEARCH_LENGTH}자 이상 입력한 뒤 검색해주세요.
+        </p>
       </form>
-
-      {placeSearch.isFetching && (
-        <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
-          장소를 검색하는 중입니다...
-        </p>
-      )}
-
-      {placeSearch.isError && (
-        <p className="mt-3 text-xs text-red-600 dark:text-red-400">
-          {toErrorMessage(placeSearch.error, "장소 검색에 실패했습니다.")}
-        </p>
-      )}
-
-      {placeSearch.isSuccess && placeSearch.data.length === 0 && (
-        <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
-          검색 결과가 없습니다.
-        </p>
-      )}
-
-      {placeSearch.isSuccess && placeSearch.data.length > 0 && (
-        <ul className="mt-3 flex max-h-48 flex-col gap-1 overflow-y-auto">
-          {placeSearch.data.map((place) => {
-            const isSelected = selectedPlace?.placeId === place.placeId;
-
-            return (
-              <li key={place.placeId}>
-                <button
-                  type="button"
-                  aria-pressed={isSelected}
-                  onClick={() => handleSelectPlace(place)}
-                  className={`w-full rounded-xl px-3 py-2 text-left transition ${
-                    isSelected
-                      ? "bg-orange-100 dark:bg-orange-900/40"
-                      : "hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                  }`}
-                >
-                  <span className="block text-sm font-medium text-zinc-900 dark:text-zinc-50">
-                    {place.name}
-                  </span>
-                  <span className="block text-xs text-zinc-500 dark:text-zinc-400">
-                    {place.address}
-                  </span>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-
-      {selectedPlace && (
-        <div className="mt-4 border-t border-zinc-200 pt-4 dark:border-zinc-800">
-          <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
-            {selectedPlace.name}
-          </p>
-          <p className="mb-3 text-xs text-zinc-500 dark:text-zinc-400">
-            {selectedPlace.address}
-          </p>
-
-          <span className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-200">
-            카테고리 선택
-          </span>
-
-          {categories.isError && (
-            <p className="text-xs text-red-600 dark:text-red-400">
-              {toErrorMessage(
-                categories.error,
-                "카테고리 목록을 불러오지 못했습니다.",
-              )}
+      <div className="search-results" aria-busy={flow.search.isFetching}>
+        {!flow.submittedQuery && (
+          <div className="empty-state">
+            <span className="empty-icon">
+              <Icon name="pin" width={30} height={30} />
+            </span>
+            <h2>기억하고 싶은 맛집이 있나요?</h2>
+            <p>
+              장소를 검색하고 카테고리를 붙여보세요.
+              <br />
+              검색 결과에서 이름과 주소를 확인할 수 있어요.
             </p>
-          )}
-
-          <div className="flex flex-wrap gap-2">
-            {(categories.data ?? []).map((category) => {
-              const isSelected = selectedCategoryIds.includes(category.id);
-
-              return (
-                <button
-                  key={category.id}
-                  type="button"
-                  aria-pressed={isSelected}
-                  onClick={() => handleToggleCategory(category.id)}
-                  className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
-                    isSelected
-                      ? "bg-orange-500 text-white"
-                      : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
-                  }`}
-                >
-                  {category.name}
-                </button>
-              );
-            })}
           </div>
-
-          <div className="mt-3 flex gap-2">
-            <input
-              type="text"
-              value={newCategoryName}
-              onChange={(event) => setNewCategoryName(event.target.value)}
-              placeholder="새 카테고리 이름"
-              aria-label="새 카테고리 이름"
-              className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50 dark:focus:border-zinc-100"
+        )}
+        {flow.search.isFetching && (
+          <div className="loading-state" role="status">
+            <span className="spinner" />
+            장소를 찾고 있어요
+          </div>
+        )}
+        {flow.submittedQuery && flow.search.isError && (
+          <ErrorMessage
+            message={flow.search.error.message}
+            onRetry={() => {
+              void flow.search.refetch();
+            }}
+          />
+        )}
+        {flow.submittedQuery &&
+          flow.search.isSuccess &&
+          !flow.search.isFetching && (
+            <>
+              <div className="section-heading">
+                <h2>
+                  검색 결과 <span>{flow.search.data.length}곳</span>
+                </h2>
+                <span className="small-muted">장소를 선택해주세요</span>
+              </div>
+              {flow.search.data.length === 0 ? (
+                <div className="empty-state compact" role="status">
+                  <Icon name="search" width={28} height={28} />
+                  <h3>일치하는 장소가 없어요</h3>
+                  <p>지역명과 맛집 이름을 함께 검색해보세요.</p>
+                </div>
+              ) : (
+                <ul className="candidate-list">
+                  {flow.search.data.map((place) => (
+                    <li key={place.placeId}>
+                      <PlaceCandidateRow
+                        place={place}
+                        selected={flow.selectedPlace?.placeId === place.placeId}
+                        disabled={flow.busy}
+                        onSelect={() => flow.selectPlace(place)}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p className="provider-credit">
+                장소 검색 제공 <strong>Google Maps</strong>
+              </p>
+            </>
+          )}
+      </div>
+      {flow.selectedPlace && (
+        <div className="category-section">
+          <div className="selected-summary">
+            <span className="small-muted">선택한 장소</span>
+            <strong>{flow.selectedPlace.name}</strong>
+            <span>{flow.selectedPlace.address}</span>
+          </div>
+          <div className="section-heading">
+            <h2>카테고리 선택</h2>
+            <span className="selection-count">
+              {flow.selectedCategoryIds.length}개 선택
+            </span>
+          </div>
+          <p className="field-help">
+            여러 개 선택할 수 있어요. 선택하지 않아도 저장돼요.
+          </p>
+          {flow.categories.isPending && (
+            <div className="loading-state" role="status">
+              <span className="spinner" />
+              카테고리를 불러오고 있어요
+            </div>
+          )}
+          {flow.categories.isError && (
+            <ErrorMessage
+              message={flow.categories.error.message}
+              onRetry={() => {
+                void flow.categories.refetch();
+              }}
             />
-            <button
-              type="button"
-              onClick={handleCreateCategory}
-              disabled={!newCategoryName.trim() || createCategory.isPending}
-              className="shrink-0 rounded-xl bg-zinc-100 px-3 py-2 text-sm font-medium text-zinc-900 transition disabled:opacity-40 dark:bg-zinc-800 dark:text-zinc-50"
-            >
-              추가
-            </button>
-          </div>
-
-          {createCategory.isError && (
-            <p className="mt-2 text-xs text-red-600 dark:text-red-400">
-              {toErrorMessage(
-                createCategory.error,
-                "카테고리를 생성하지 못했습니다.",
+          )}
+          {flow.categories.isSuccess && (
+            <>
+              <div
+                className="category-chips"
+                role="group"
+                aria-label="맛집 카테고리 복수 선택"
+              >
+                {flow.categories.data.map((category) => {
+                  const selected = flow.selectedCategoryIds.includes(
+                    category.id,
+                  );
+                  return (
+                    <button
+                      type="button"
+                      key={category.id}
+                      className={`category-chip${selected ? " is-selected" : ""}`}
+                      aria-pressed={selected}
+                      disabled={flow.busy}
+                      onClick={() => flow.toggleCategory(category.id)}
+                    >
+                      {selected && <Icon name="check" width={16} height={16} />}
+                      {category.name}
+                    </button>
+                  );
+                })}
+              </div>
+              {flow.categories.data.length === 0 && (
+                <p className="field-help">
+                  아직 카테고리가 없어요. 첫 카테고리를 만들어보세요.
+                </p>
               )}
+              <form
+                className="create-category-form"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  flow.addCategory();
+                }}
+              >
+                <label className="sr-only" htmlFor="new-category">
+                  새 카테고리 이름
+                </label>
+                <div className="input-row">
+                  <input
+                    id="new-category"
+                    value={flow.newCategoryName}
+                    onChange={(event) =>
+                      flow.setNewCategoryName(event.target.value)
+                    }
+                    placeholder="새 카테고리 이름"
+                    maxLength={MAX_CATEGORY_LENGTH}
+                    disabled={flow.busy}
+                    aria-describedby="category-help"
+                  />
+                  <button
+                    type="submit"
+                    className="button button-secondary"
+                    disabled={!flow.newCategoryName.trim() || flow.busy}
+                  >
+                    {flow.createCategory.isPending ? (
+                      "추가 중"
+                    ) : (
+                      <>
+                        <Icon name="plus" width={16} height={16} />
+                        추가
+                      </>
+                    )}
+                  </button>
+                </div>
+                <p className="field-help" id="category-help">
+                  최대 {MAX_CATEGORY_LENGTH}자 · 카테고리는 함께 사용해요.
+                </p>
+              </form>
+            </>
+          )}
+          {flow.validationMessage && (
+            <p className="feedback" role="status">
+              {flow.validationMessage}
             </p>
           )}
-
-          <button
-            type="button"
-            onClick={handleSaveRestaurant}
-            disabled={saveRestaurant.isPending}
-            className="mt-4 w-full rounded-xl bg-orange-500 px-4 py-3 text-sm font-medium text-white transition disabled:opacity-40"
-          >
-            맛집으로 저장
-          </button>
-
-          {saveRestaurant.isError && (
-            <p className="mt-2 text-xs text-red-600 dark:text-red-400">
-              {toErrorMessage(saveRestaurant.error, "맛집을 저장하지 못했습니다.")}
-            </p>
+          {flow.createCategory.isError && (
+            <ErrorMessage message={flow.createCategory.error.message} />
           )}
-
-          {saveRestaurant.isSuccess && (
-            <p className="mt-2 text-xs text-emerald-600 dark:text-emerald-400">
-              저장했습니다. 카테고리{" "}
-              {saveRestaurant.data.categories.length}개가 연결되었습니다.
-            </p>
-          )}
+          <div className="save-area">
+            {flow.save.isError && (
+              <ErrorMessage message={flow.save.error.message} />
+            )}
+            {flow.save.isSuccess ? (
+              <div className="save-success" role="status">
+                <span className="success-icon">
+                  <Icon name="check" />
+                </span>
+                <div>
+                  <strong>맛집으로 저장했어요</strong>
+                  <p>
+                    카테고리 {flow.save.data.categories.length}개를 연결했어요.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={() => {
+                    flow.startAgain();
+                    searchRef.current?.focus();
+                  }}
+                >
+                  다른 맛집 등록
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="button button-primary save-button"
+                onClick={flow.savePlace}
+                disabled={!flow.canSave}
+              >
+                {flow.save.isPending ? (
+                  <>
+                    <span className="spinner" />
+                    저장 중이에요
+                  </>
+                ) : (
+                  "맛집으로 저장"
+                )}
+              </button>
+            )}
+          </div>
         </div>
       )}
+      <p className="panel-footer">
+        <Icon name="info" width={14} height={14} />
+        등록한 맛집의 지도 표시는 준비 중이에요.
+      </p>
     </section>
   );
 }

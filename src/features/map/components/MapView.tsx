@@ -17,18 +17,8 @@ function LocationStatusBanner({
   message: string;
   variant: "loading" | "warning" | "error";
 }) {
-  const styles = {
-    loading: "bg-blue-50 text-blue-800 dark:bg-blue-950 dark:text-blue-200",
-    warning:
-      "bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-200",
-    error: "bg-red-50 text-red-800 dark:bg-red-950 dark:text-red-200",
-  };
-
   return (
-    <div
-      className={`absolute bottom-24 left-4 right-4 z-30 rounded-lg px-4 py-2 text-sm shadow-md ${styles[variant]}`}
-      role="status"
-    >
+    <div className={`map-location-status ${variant}`} role="status">
       {message}
     </div>
   );
@@ -73,7 +63,7 @@ export function MapView() {
         variant: "error" as const,
         message:
           mapErrorMessage ??
-          "지도를 불러오지 못했습니다. API key 또는 네트워크 상태를 확인해주세요.",
+          "지도를 불러오지 못했어요. 장소 검색과 등록은 계속할 수 있어요.",
       };
     }
 
@@ -111,7 +101,7 @@ export function MapView() {
   return (
     <div ref={containerRef} className="relative flex-1 min-h-0 w-full">
       <MapContainer
-        className="absolute inset-0 h-full w-full bg-zinc-200 dark:bg-zinc-800"
+        className="absolute inset-0 h-full w-full bg-zinc-100"
         onMapError={handleMapError}
         onMapReady={handleMapReady}
       />

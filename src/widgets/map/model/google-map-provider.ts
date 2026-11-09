@@ -34,6 +34,7 @@ interface GoogleMarkerEntry {
 export class GoogleMapProvider implements IMapProvider {
   private googleMaps: GoogleMapsApi | null = null;
   private map: GoogleMap | null = null;
+  private initializationVersion = 0;
   private center: Coordinate = { latitude: 37.5665, longitude: 126.978 };
   private zoom = 13;
   private markers: Map<string, GoogleMarkerEntry> = new Map();
@@ -50,7 +51,10 @@ export class GoogleMapProvider implements IMapProvider {
     container: HTMLElement,
     options: MapInitOptions,
   ): Promise<void> {
-    this.googleMaps = await loadGoogleMaps();
+    const version = ++this.initializationVersion;
+    const googleMaps = await loadGoogleMaps();
+    if (version !== this.initializationVersion) return;
+    this.googleMaps = googleMaps;
     this.center = options.center;
     this.zoom = options.zoom;
 
@@ -67,6 +71,7 @@ export class GoogleMapProvider implements IMapProvider {
   }
 
   destroy(): void {
+    this.initializationVersion++;
     this.clearMarkers();
 
     for (const listener of this.mapListeners) {
@@ -216,7 +221,10 @@ export class GoogleMapProvider implements IMapProvider {
     ];
   }
 
-  private emit<T extends MapEvent>(event: T, payload: MapEventPayload[T]): void {
+  private emit<T extends MapEvent>(
+    event: T,
+    payload: MapEventPayload[T],
+  ): void {
     for (const handler of this.handlers[event]) {
       handler(payload);
     }

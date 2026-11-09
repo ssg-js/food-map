@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "맛집지도",
+    "slug": "food-map-mobile",
+    "scheme": "foodmap",
+    "version": "0.1.0",
+    "orientation": "default",
+    "icon": "./assets/food-map-icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.foodmap.development",
+      "infoPlist": {
+        "NSLocalNetworkUsageDescription": "개발 중인 맛집지도 서버에 연결합니다.",
+        "NSAppTransportSecurity": { "NSAllowsLocalNetworking": true }
+      }
+    },
+    "android": {
+      "package": "com.foodmap.development",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/food-map-icon.png",
+        "backgroundColor": "#3182f6"
+      }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-asset",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "현재 위치 주변의 지도를 표시하기 위해 위치 권한이 필요합니다.",
+          "isIosBackgroundLocationEnabled": false,
+          "isAndroidBackgroundLocationEnabled": false
+        }
+      ]
+    ],
+    "web": { "bundler": "metro", "favicon": "./assets/food-map-icon.png" }
+  }
+}

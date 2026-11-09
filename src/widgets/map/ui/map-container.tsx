@@ -45,39 +45,40 @@ export function MapContainer({
         center: { latitude, longitude },
         zoom: initialZoom,
       }),
-    ).then(() => {
-      if (!isActive) {
-        provider.destroy();
-        return;
-      }
+    )
+      .then(() => {
+        if (!isActive) {
+          return;
+        }
 
-      const {
-        latitude: latestLatitude,
-        longitude: latestLongitude,
-        zoom: latestZoom,
-      } = useMapStore.getState();
+        const {
+          latitude: latestLatitude,
+          longitude: latestLongitude,
+          zoom: latestZoom,
+        } = useMapStore.getState();
 
-      provider.setCenter({
-        latitude: latestLatitude,
-        longitude: latestLongitude,
+        provider.setCenter({
+          latitude: latestLatitude,
+          longitude: latestLongitude,
+        });
+        provider.setZoom(latestZoom);
+        isInitializedRef.current = true;
+        setIsInitialized(true);
+        const bounds = provider.getBounds();
+        if (bounds) {
+          onBoundsChange?.(bounds);
+        }
+        onMapReady?.();
+      })
+      .catch((error: unknown) => {
+        if (!isActive) return;
+
+        onMapError?.(
+          error instanceof Error
+            ? error
+            : new Error("지도를 초기화하지 못했습니다."),
+        );
       });
-      provider.setZoom(latestZoom);
-      isInitializedRef.current = true;
-      setIsInitialized(true);
-      const bounds = provider.getBounds();
-      if (bounds) {
-        onBoundsChange?.(bounds);
-      }
-      onMapReady?.();
-    }).catch((error: unknown) => {
-      if (!isActive) return;
-
-      onMapError?.(
-        error instanceof Error
-          ? error
-          : new Error("지도를 초기화하지 못했습니다."),
-      );
-    });
 
     const handleCenterChanged = (center: Coordinate) => {
       setCenter(center.latitude, center.longitude);

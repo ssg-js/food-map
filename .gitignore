@@ -41,3 +41,14 @@ yarn-error.log*
 next-env.d.ts
 
 /src/generated/prisma
+
+# Native application local state and verification artifacts
+apps/mobile/node_modules/
+apps/mobile/.expo/
+apps/mobile/dist/
+apps/mobile/dist-web/
+apps/mobile/ios/
+apps/mobile/android/
+playwright-report/
+test-results/
+!apps/mobile/.env.example
