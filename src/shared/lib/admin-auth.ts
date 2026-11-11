@@ -16,5 +16,11 @@ export function validAdminSession(token: string | undefined, key: string | null,
   return equalSecret(signature,createHmac("sha256",key).update(expires).digest("hex"));
 }
 export function sameOrigin(request: Request) {
-  return request.headers.get("origin") === new URL(request.url).origin;
+  try {
+    const origin=new URL(request.headers.get("origin") ?? "");
+    // Next may normalize request.url to its internal bind hostname. Host is the
+    // browser-facing authority; do not accept arbitrary forwarded-host headers.
+    const host=request.headers.get("host") ?? new URL(request.url).host;
+    return ["http:","https:"].includes(origin.protocol) && origin.host.toLowerCase() === host.toLowerCase();
+  } catch { return false; }
 }

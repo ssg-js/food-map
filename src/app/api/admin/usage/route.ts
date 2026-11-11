@@ -16,7 +16,7 @@ export async function GET() {
     const enabled=process.env.GOOGLE_PLACES_ENABLED === "true" && !!process.env.GOOGLE_PLACES_API_KEY;
     const projectId=process.env.GOOGLE_CLOUD_PROJECT;
     return NextResponse.json({month:clock.month,day:clock.day,budget,daily,dailyUsed,monthlyRemaining,dailyRemaining,
-      status:!enabled?"DISABLED":!budget?"UNCONFIGURED":monthlyRemaining===0||dailyRemaining===0?"BLOCKED":"ACTIVE",
+      status:process.env.GOOGLE_SEARCH_LIMITS_DISABLED === "true"?"LIMITS_DISABLED":!enabled?"DISABLED":!budget?"UNCONFIGURED":monthlyRemaining===0||dailyRemaining===0?"BLOCKED":"ACTIVE",
       monitoringConfigured:!!projectId && process.env.GOOGLE_MONITORING_ENABLED === "true",
       snapshot:snapshot?.projectId===projectId && snapshot?.month===clock.month?snapshot:null,
       browserMapEnabled:process.env.GOOGLE_MAPS_BROWSER_ENABLED === "true",fetchedAt:new Date().toISOString()}, {headers:privateHeaders});
