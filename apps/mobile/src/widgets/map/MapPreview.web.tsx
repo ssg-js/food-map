@@ -1,27 +1,26 @@
-import { StyleSheet, Text, View } from "react-native";
-export function MapPreview() {
+import { View, Text, StyleSheet } from "react-native";
+import type { Place } from "@food-map/registration";
+import { apiBaseUrl } from "../../shared/api";
+export function MapPreview({ place }: { place?: Place | null }) {
   return (
-    <View style={styles.map}>
-      <Text style={styles.title}>지도 미리보기</Text>
-      <Text style={styles.text}>웹 지도는 Next.js 웹앱에서 이용해주세요.</Text>
-      <Text style={styles.text}>
-        이 화면에서도 기존 API로 장소 검색과 등록을 할 수 있어요.
-      </Text>
+    <View style={s.map}>
+      {place?.location ? (
+        <iframe
+          title={`${place.name} 위치`}
+          src={`${apiBaseUrl}/map-preview?${new URLSearchParams({ lat: String(place.location?.latitude ?? ""), lng: String(place.location?.longitude ?? "") })}`}
+          style={{ width: "100%", height: 260, border: 0 }}
+        />
+      ) : (
+        <View style={s.empty}>
+          <Text style={s.title}>지도 미리보기</Text>
+          <Text>장소를 선택하면 Google 지도에 핀이 표시돼요.</Text>
+        </View>
+      )}
     </View>
   );
 }
-const styles = StyleSheet.create({
-  map: {
-    height: 205,
-    backgroundColor: "#e8edf1",
-    padding: 24,
-    justifyContent: "center",
-  },
-  title: {
-    fontWeight: "700",
-    fontSize: 15,
-    marginBottom: 10,
-    color: "#191f28",
-  },
-  text: { color: "#6b7684", fontSize: 12, lineHeight: 20 },
+const s = StyleSheet.create({
+  map: { height: 260, backgroundColor: "#e8edf1" },
+  empty: { flex: 1, justifyContent: "center", alignItems: "center", gap: 10 },
+  title: { fontSize: 17, fontWeight: "700", color: "#191f28" },
 });

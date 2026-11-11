@@ -1,3 +1,4 @@
+import { Link } from "expo-router";
 import { useRef, type ComponentRef } from "react";
 import {
   ActivityIndicator,
@@ -66,33 +67,94 @@ function Candidate({
   );
 }
 function CategoryGroups({ flow }: { flow: RegistrationController }) {
-  const groups = [{kind:"FOOD",title:"음식 종류"},{kind:"PURPOSE",title:"방문 목적"},{kind:"UNCLASSIFIED",title:"기존 카테고리 · 분류 전"}] as const;
-  return <>{groups.map(({kind,title}) => {
-    const items = flow.categories.data?.filter(c => c.kind === kind) ?? [];
-    if (kind === "UNCLASSIFIED" && !items.length) return null;
-    return <View key={kind} style={{marginTop:22,gap:10}}>
-      <Text style={s.sectionTitle} accessibilityRole="header">{title}</Text>
-      <View style={s.chips}>{items.map(c => {
-        const selected = flow.selectedCategoryIds.includes(c.id);
-        return <Pressable key={c.id} accessibilityRole="checkbox" accessibilityLabel={c.name} aria-checked={selected}
-          accessibilityState={{checked:selected,disabled:flow.busy || !flow.existing.isSuccess}} disabled={flow.busy || !flow.existing.isSuccess}
-          onPress={() => flow.toggleCategory(c.id)} style={[s.chip, selected && s.chipSelected]}>
-          <Text style={[s.chipText,selected && s.activeText]}>{selected ? "✓  " : ""}{c.name}</Text></Pressable>;
+  const groups = [
+    { kind: "FOOD", title: "음식 종류" },
+    { kind: "PURPOSE", title: "방문 목적" },
+    { kind: "UNCLASSIFIED", title: "기존 카테고리 · 분류 전" },
+  ] as const;
+  return (
+    <>
+      {groups.map(({ kind, title }) => {
+        const items =
+          flow.categories.data?.filter((c) => c.kind === kind) ?? [];
+        if (kind === "UNCLASSIFIED" && !items.length) return null;
+        return (
+          <View key={kind} style={{ marginTop: 22, gap: 10 }}>
+            <Text style={s.sectionTitle} accessibilityRole="header">
+              {title}
+            </Text>
+            <View style={s.chips}>
+              {items.map((c) => {
+                const selected = flow.selectedCategoryIds.includes(c.id);
+                return (
+                  <Pressable
+                    key={c.id}
+                    accessibilityRole="checkbox"
+                    accessibilityLabel={c.name}
+                    aria-checked={selected}
+                    accessibilityState={{
+                      checked: selected,
+                      disabled: flow.busy || !flow.existing.isSuccess,
+                    }}
+                    disabled={flow.busy || !flow.existing.isSuccess}
+                    onPress={() => flow.toggleCategory(c.id)}
+                    style={[s.chip, selected && s.chipSelected]}
+                  >
+                    <Text style={[s.chipText, selected && s.activeText]}>
+                      {selected ? "✓  " : ""}
+                      {c.name}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+              {kind !== "UNCLASSIFIED" && (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`${title} 직접 추가`}
+                  disabled={flow.busy || !flow.existing.isSuccess}
+                  style={s.chip}
+                  onPress={() => flow.openCategory(kind)}
+                >
+                  <Text style={s.activeText}>+ 직접 추가</Text>
+                </Pressable>
+              )}
+            </View>
+            {flow.newCategoryKind === kind && (
+              <View style={{ gap: 10 }}>
+                <Text style={s.fieldLabel}>새 {title}</Text>
+                <TextInput
+                  style={s.input}
+                  accessibilityLabel={`새 ${title}`}
+                  value={flow.newCategoryName}
+                  onChangeText={flow.setNewCategoryName}
+                  placeholder={`${title} 이름`}
+                  maxLength={MAX_CATEGORY_LENGTH}
+                  editable={!flow.busy}
+                  onSubmitEditing={flow.addCategory}
+                />
+                <View style={s.inputRow}>
+                  <Text style={s.help}>
+                    {flow.newCategoryName.length}/{MAX_CATEGORY_LENGTH}
+                  </Text>
+                  <ActionButton
+                    label="취소"
+                    secondary
+                    disabled={flow.busy}
+                    onPress={() => flow.openCategory(null)}
+                  />
+                  <ActionButton
+                    label="추가"
+                    disabled={flow.busy || !flow.newCategoryName.trim()}
+                    onPress={flow.addCategory}
+                  />
+                </View>
+              </View>
+            )}
+          </View>
+        );
       })}
-      {kind !== "UNCLASSIFIED" && <Pressable accessibilityRole="button" accessibilityLabel={`${title} 직접 추가`} disabled={flow.busy || !flow.existing.isSuccess}
-        style={s.chip} onPress={() => flow.openCategory(kind)}><Text style={s.activeText}>+ 직접 추가</Text></Pressable>}
-      </View>
-      {flow.newCategoryKind === kind && <View style={{gap:10}}>
-        <Text style={s.fieldLabel}>새 {title}</Text>
-        <TextInput style={s.input} accessibilityLabel={`새 ${title}`} value={flow.newCategoryName} onChangeText={flow.setNewCategoryName}
-          placeholder={`${title} 이름`} maxLength={MAX_CATEGORY_LENGTH} editable={!flow.busy} onSubmitEditing={flow.addCategory} />
-        <View style={s.inputRow}><Text style={s.help}>{flow.newCategoryName.length}/{MAX_CATEGORY_LENGTH}</Text>
-          <ActionButton label="취소" secondary disabled={flow.busy} onPress={() => flow.openCategory(null)} />
-          <ActionButton label="추가" disabled={flow.busy || !flow.newCategoryName.trim()} onPress={flow.addCategory} />
-        </View>
-      </View>}
-    </View>;
-  })}</>;
+    </>
+  );
 }
 export function RegistrationScreen() {
   const flow = useRegistration(api);
@@ -102,7 +164,10 @@ export function RegistrationScreen() {
   const step = flow.save.isSuccess ? 3 : flow.selectedPlace ? 2 : 1;
   return (
     <SafeAreaView edges={["top", "left", "right"]} style={s.safe}>
-      <SearchNotice notice={flow.searchNotice} onClose={flow.dismissSearchNotice} />
+      <SearchNotice
+        notice={flow.searchNotice}
+        onClose={flow.dismissSearchNotice}
+      />
       <View style={s.header}>
         <Image
           source={require("../../../assets/food-map-icon.png")}
@@ -110,6 +175,15 @@ export function RegistrationScreen() {
           accessibilityIgnoresInvertColors
         />
         <Text style={s.brand}>맛집지도</Text>
+        <Link
+          href="/saved"
+          style={{ marginLeft: "auto", color: "#1b64da", padding: 12 }}
+        >
+          저장 목록
+        </Link>
+        <Link href="/categories" style={{ color: "#1b64da", padding: 8 }}>
+          분류 관리
+        </Link>
       </View>
       <KeyboardAvoidingView
         style={s.flex}
@@ -123,8 +197,26 @@ export function RegistrationScreen() {
           keyboardDismissMode="on-drag"
           automaticallyAdjustKeyboardInsets={false}
         >
-          <MapPreview />
-          {flow.selectedPlace && <View style={{padding:16,backgroundColor:"#e8f3ff"}}><Text style={s.sectionTitle}>{flow.selectedPlace.name}</Text><Text style={s.help}>{flow.selectedPlace.address}</Text><ActionButton label="Google 지도에서 위치 보기" onPress={()=>{const p=flow.selectedPlace;if(p)void Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.name)}&query_place_id=${encodeURIComponent(p.placeId)}`);}} /></View>}
+          <MapPreview
+            key={flow.selectedPlace?.placeId ?? "empty"}
+            place={flow.selectedPlace}
+          />
+          {flow.selectedPlace && (
+            <View style={{ padding: 16, backgroundColor: "#e8f3ff" }}>
+              <Text style={s.sectionTitle}>{flow.selectedPlace.name}</Text>
+              <Text style={s.help}>{flow.selectedPlace.address}</Text>
+              <ActionButton
+                label="Google 지도에서 위치 보기"
+                onPress={() => {
+                  const p = flow.selectedPlace;
+                  if (p)
+                    void Linking.openURL(
+                      `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.name)}&query_place_id=${encodeURIComponent(p.placeId)}`,
+                    );
+                }}
+              />
+            </View>
+          )}
 
           <View style={s.panel}>
             <View style={s.handle} />
@@ -291,10 +383,20 @@ export function RegistrationScreen() {
                     {flow.categories.error.message}
                   </Feedback>
                 )}
-                {flow.existing.isPending && <Text style={s.help}>저장된 카테고리를 확인하고 있어요.</Text>}
-                {flow.existing.isError && <Feedback error onRetry={flow.retryExisting}>{flow.existing.error.message}</Feedback>}
+                {flow.existing.isPending && (
+                  <Text style={s.help}>저장된 카테고리를 확인하고 있어요.</Text>
+                )}
+                {flow.existing.isError && (
+                  <Feedback error onRetry={flow.retryExisting}>
+                    {flow.existing.error.message}
+                  </Feedback>
+                )}
                 {flow.categories.isSuccess && <CategoryGroups flow={flow} />}
-                {flow.newCategoryName.trim() ? <Text style={s.help}>입력한 카테고리를 추가하거나 취소한 뒤 저장해주세요.</Text> : null}
+                {flow.newCategoryName.trim() ? (
+                  <Text style={s.help}>
+                    입력한 카테고리를 추가하거나 취소한 뒤 저장해주세요.
+                  </Text>
+                ) : null}
                 {flow.validationMessage ? (
                   <Feedback>{flow.validationMessage}</Feedback>
                 ) : null}

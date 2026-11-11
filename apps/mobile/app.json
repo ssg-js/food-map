@@ -12,7 +12,9 @@
       "bundleIdentifier": "com.foodmap.development",
       "infoPlist": {
         "NSLocalNetworkUsageDescription": "개발 중인 맛집지도 서버에 연결합니다.",
-        "NSAppTransportSecurity": { "NSAllowsLocalNetworking": true }
+        "NSAppTransportSecurity": {
+          "NSAllowsLocalNetworking": true
+        }
       }
     },
     "android": {
@@ -33,8 +35,12 @@
           "isIosBackgroundLocationEnabled": false,
           "isAndroidBackgroundLocationEnabled": false
         }
-      ]
+      ],
+      "expo-status-bar"
     ],
-    "web": { "bundler": "metro", "favicon": "./assets/food-map-icon.png" }
+    "web": {
+      "bundler": "metro",
+      "favicon": "./assets/food-map-icon.png"
+    }
   }
 }
