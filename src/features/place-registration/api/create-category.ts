@@ -3,11 +3,11 @@ import { readApiErrorMessage } from "@/shared/lib/api-error";
 
 import { isCategory } from "./fetch-categories";
 
-export async function createCategory(name: string): Promise<Category> {
+export async function createCategory(input: { name: string; kind: "FOOD" | "PURPOSE" }): Promise<Category> {
   const response = await fetch("/api/categories", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name }),
+    body: JSON.stringify(input),
   });
 
   if (!response.ok) {

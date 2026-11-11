@@ -8,6 +8,7 @@ const CATEGORY_NAME_MAX_LENGTH = 20;
 
 const createCategoryBodySchema = z.object({
   name: z.string(),
+  kind: z.enum(["FOOD", "PURPOSE"]),
 });
 
 function normalizeCategoryName(name: string): string {
@@ -18,7 +19,7 @@ export async function GET() {
   try {
     const items = await prisma.category.findMany({
       orderBy: { name: "asc" },
-      select: { id: true, name: true },
+      select: { id: true, name: true, kind: true },
     });
 
     return NextResponse.json({ items });
@@ -48,7 +49,7 @@ export async function POST(request: Request) {
 
   if (!parsedBody.success) {
     return NextResponse.json(
-      { message: "카테고리 이름이 필요합니다." },
+      { message: "카테고리 이름과 음식 종류 또는 방문 목적 구분이 필요합니다." },
       { status: 400 },
     );
   }
@@ -73,8 +74,8 @@ export async function POST(request: Request) {
 
   try {
     const category = await prisma.category.create({
-      data: { name },
-      select: { id: true, name: true },
+      data: { name, kind: parsedBody.data.kind },
+      select: { id: true, name: true, kind: true },
     });
 
     return NextResponse.json(category, { status: 201 });

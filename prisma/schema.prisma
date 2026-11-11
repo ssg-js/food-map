@@ -24,10 +24,13 @@ model Restaurant {
 
 model Category {
   id        String   @id @default(cuid())
-  name      String   @unique
+  name      String
+  kind      CategoryKind @default(UNCLASSIFIED)
   createdAt DateTime @default(now())
 
   restaurants RestaurantCategory[]
+
+  @@unique([kind, name])
 }
 
 model RestaurantCategory {
@@ -39,4 +42,34 @@ model RestaurantCategory {
 
   @@id([restaurantId, categoryId])
   @@index([categoryId])
+}
+
+
+enum CategoryKind {
+  FOOD
+  PURPOSE
+  UNCLASSIFIED
+}
+
+// One shared budget across all server instances and API keys. Never auto-created.
+model GoogleSearchBudget {
+  month      String @id
+  used       Int
+  limit      Int
+  day        String @default("")
+  dailyUsed  Int @default(0)
+  dailyLimit Int @default(100)
+  updatedAt  DateTime @default(now()) @updatedAt
+}
+
+model GoogleSearchDailyUsage {
+  day String @id
+  used Int @default(0)
+}
+model GoogleMonitoringSnapshot {
+  id String @id
+  projectId String
+  month String
+  payload Json
+  fetchedAt DateTime @default(now())
 }

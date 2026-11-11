@@ -1,11 +1,10 @@
+import { SelectedPlaceMap } from "@/features/map/components/SelectedPlaceMap";
 import Link from "next/link";
 import { PlaceRegistrationPanel } from "@/features/place-registration/components/PlaceRegistrationPanel";
-import { MapView } from "@/features/map/components/MapView";
-import { MapProvider } from "@/widgets/map";
 import { Icon } from "@/shared/ui/icon";
 import { InstallAppButton } from "@/features/pwa/components/InstallAppButton";
 export function RegistrationScreen() {
-  const hasMapKey = Boolean(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY);
+  const hasMapKey = Boolean(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) && process.env.GOOGLE_MAPS_BROWSER_ENABLED === "true";
   return (
     <div className="food-map-app">
       <a href="#registration" className="skip-link">
@@ -28,18 +27,7 @@ export function RegistrationScreen() {
           className={`map-pane${hasMapKey ? "" : " map-placeholder"}`}
           aria-label="주변 지도"
         >
-          {hasMapKey && (
-            <MapProvider providerType="google">
-              <MapView />
-            </MapProvider>
-          )}
-          {!hasMapKey && (
-            <div className="placeholder-caption">
-              지도 연결을 준비하고 있어요.
-              <br />
-              장소 검색과 등록은 계속할 수 있어요.
-            </div>
-          )}
+          <SelectedPlaceMap apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? ""} />
           <div className="map-notice">
             <span className="notice-icon">
               <Icon name="pin" />

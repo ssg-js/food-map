@@ -60,7 +60,7 @@ npm run test:e2e
 - `apps/mobile/`: 별도 Expo 앱·의존성·lockfile
 - `packages/registration/`: 공통 API 계약과 등록 컨트롤러
 - `디자인/`: 검토용 시안
-- `이전작업/`: 이전 폴더에서 가져온 참고 자료
+- `디자인/보관/초기-v1/`: 이전 폴더에서 가져온 참고 자료
 
 상세 결정과 검증 결과는 `docs/adr/2026-11-08-web-pwa-native-registration.md`, `docs/00_project-management/frontend-development-handoff.md`에서 확인합니다. 이 작업은 로컬 개발이며 배포하지 않습니다.
 

@@ -8,7 +8,7 @@ export function isCategory(value: unknown): value is Category {
 
   const category = value as Record<string, unknown>;
 
-  return typeof category.id === "string" && typeof category.name === "string";
+  return typeof category.id === "string" && typeof category.name === "string" && ["FOOD", "PURPOSE", "UNCLASSIFIED"].includes(String(category.kind));
 }
 
 function parseCategoryList(value: unknown): Category[] {

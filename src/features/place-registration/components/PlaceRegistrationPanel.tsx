@@ -2,13 +2,14 @@
 import { useRef } from "react";
 import {
   createRegistrationApi,
-  MAX_CATEGORY_LENGTH,
   MIN_SEARCH_LENGTH,
   useRegistration,
 } from "@food-map/registration";
 import { Icon } from "@/shared/ui/icon";
 import { PlaceCandidateRow } from "./PlaceCandidateRow";
 import { RegistrationSteps } from "./RegistrationSteps";
+import { CategoryGroups } from "./CategoryGroups";
+import { SearchNotice } from "./SearchNotice";
 const api = createRegistrationApi();
 function ErrorMessage({
   message,
@@ -39,6 +40,7 @@ export function PlaceRegistrationPanel() {
       aria-labelledby="registration-title"
       id="registration"
     >
+      <SearchNotice notice={flow.searchNotice} onClose={flow.dismissSearchNotice} />
       <div className="panel-handle" aria-hidden="true" />
       <div className="panel-heading">
         <p className="eyebrow">나만의 발견, 함께 쓰는 맛집지도</p>
@@ -140,7 +142,7 @@ export function PlaceRegistrationPanel() {
                         place={place}
                         selected={flow.selectedPlace?.placeId === place.placeId}
                         disabled={flow.busy}
-                        onSelect={() => flow.selectPlace(place)}
+                        onSelect={() => { flow.selectPlace(place); window.dispatchEvent(new CustomEvent("food-map-place", { detail: place })); }}
                       />
                     </li>
                   ))}
@@ -182,80 +184,10 @@ export function PlaceRegistrationPanel() {
               }}
             />
           )}
-          {flow.categories.isSuccess && (
-            <>
-              <div
-                className="category-chips"
-                role="group"
-                aria-label="맛집 카테고리 복수 선택"
-              >
-                {flow.categories.data.map((category) => {
-                  const selected = flow.selectedCategoryIds.includes(
-                    category.id,
-                  );
-                  return (
-                    <button
-                      type="button"
-                      key={category.id}
-                      className={`category-chip${selected ? " is-selected" : ""}`}
-                      aria-pressed={selected}
-                      disabled={flow.busy}
-                      onClick={() => flow.toggleCategory(category.id)}
-                    >
-                      {selected && <Icon name="check" width={16} height={16} />}
-                      {category.name}
-                    </button>
-                  );
-                })}
-              </div>
-              {flow.categories.data.length === 0 && (
-                <p className="field-help">
-                  아직 카테고리가 없어요. 첫 카테고리를 만들어보세요.
-                </p>
-              )}
-              <form
-                className="create-category-form"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  flow.addCategory();
-                }}
-              >
-                <label className="sr-only" htmlFor="new-category">
-                  새 카테고리 이름
-                </label>
-                <div className="input-row">
-                  <input
-                    id="new-category"
-                    value={flow.newCategoryName}
-                    onChange={(event) =>
-                      flow.setNewCategoryName(event.target.value)
-                    }
-                    placeholder="새 카테고리 이름"
-                    maxLength={MAX_CATEGORY_LENGTH}
-                    disabled={flow.busy}
-                    aria-describedby="category-help"
-                  />
-                  <button
-                    type="submit"
-                    className="button button-secondary"
-                    disabled={!flow.newCategoryName.trim() || flow.busy}
-                  >
-                    {flow.createCategory.isPending ? (
-                      "추가 중"
-                    ) : (
-                      <>
-                        <Icon name="plus" width={16} height={16} />
-                        추가
-                      </>
-                    )}
-                  </button>
-                </div>
-                <p className="field-help" id="category-help">
-                  최대 {MAX_CATEGORY_LENGTH}자 · 카테고리는 함께 사용해요.
-                </p>
-              </form>
-            </>
-          )}
+          {flow.existing.isPending && <p role="status">저장된 카테고리를 확인하고 있어요.</p>}
+          {flow.existing.isError && <ErrorMessage message={flow.existing.error.message} onRetry={flow.retryExisting} />}
+          {flow.categories.isSuccess && <CategoryGroups flow={flow} />}
+          {flow.newCategoryName.trim() && <p className="field-help">입력한 카테고리를 추가하거나 취소한 뒤 저장해주세요.</p>}
           {flow.validationMessage && (
             <p className="feedback" role="status">
               {flow.validationMessage}

@@ -7,7 +7,7 @@ const prisma = new PrismaClient();
 async function main() {
   for (const name of SEED_CATEGORIES) {
     await prisma.category.upsert({
-      where: { name },
+      where: { kind_name: { kind: "UNCLASSIFIED", name } },
       update: {},
       create: { name },
     });

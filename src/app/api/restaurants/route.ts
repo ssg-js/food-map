@@ -17,7 +17,7 @@ const restaurantSelect = {
   categories: {
     select: {
       category: {
-        select: { id: true, name: true },
+        select: { id: true, name: true, kind: true },
       },
     },
     orderBy: {
@@ -29,7 +29,7 @@ const restaurantSelect = {
 interface RestaurantRecord {
   id: string;
   googlePlaceId: string;
-  categories: { category: { id: string; name: string } }[];
+  categories: { category: { id: string; name: string; kind: "FOOD" | "PURPOSE" | "UNCLASSIFIED" } }[];
 }
 
 /** Thrown inside the save transaction when a requested category does not exist. */
@@ -49,8 +49,14 @@ function normalizeCategoryIds(categoryIds: string[]): string[] {
   ];
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const placeId = new URL(request.url).searchParams.get("placeId");
+    if (placeId !== null) {
+      if (!placeId.trim() || placeId.length > 512) return NextResponse.json({ message: "장소 ID가 올바르지 않습니다." }, { status: 400 });
+      const restaurant = await prisma.restaurant.findUnique({ where: { googlePlaceId: placeId }, select: restaurantSelect });
+      return NextResponse.json(restaurant ? toRestaurant(restaurant) : null, { headers: { "Cache-Control": "no-store" } });
+    }
     const restaurants = await prisma.restaurant.findMany({
       orderBy: { createdAt: "asc" },
       take: RESTAURANT_RESULT_LIMIT,

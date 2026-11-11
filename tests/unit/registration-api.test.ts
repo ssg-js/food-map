@@ -37,13 +37,13 @@ test("category normalization matches backend rules and optional category save st
   const api = createRegistrationApi("", async (path, init) => {
     requests.push({ path: String(path), body: JSON.parse(String(init?.body)) });
     return String(path).includes("categories")
-      ? Response.json({ id: "c", name: "혼자 먹기" })
+      ? Response.json({ id: "c", name: "혼자 먹기", kind: "PURPOSE" })
       : Response.json({ id: "r", googlePlaceId: "p", categories: [] });
   });
   assert.equal(normalizeCategoryName("  혼자   먹기  "), "혼자 먹기");
-  await api.createCategory("  혼자   먹기  ");
+  await api.createCategory({name:"  혼자   먹기  ",kind:"PURPOSE"});
   await api.save({ googlePlaceId: "p", categoryIds: [] });
-  assert.deepEqual(requests[0].body, { name: "혼자 먹기" });
+  assert.deepEqual(requests[0].body, { name: "혼자 먹기", kind: "PURPOSE" });
   assert.deepEqual(requests[1].body, { googlePlaceId: "p", categoryIds: [] });
 });
 test("category validation prevents unnecessary mutations", async () => {
@@ -52,8 +52,8 @@ test("category validation prevents unnecessary mutations", async () => {
     requests++;
     return Response.json({});
   });
-  await assert.rejects(api.createCategory(" "), /1~20/);
-  await assert.rejects(api.createCategory("가".repeat(21)), /1~20/);
+  await assert.rejects(api.createCategory({name:" ",kind:"FOOD"}), /1~20/);
+  await assert.rejects(api.createCategory({name:"가".repeat(21),kind:"FOOD"}), /1~20/);
   assert.equal(requests, 0);
 });
 test("server errors preserve useful messages, non-JSON errors have a fallback", async () => {

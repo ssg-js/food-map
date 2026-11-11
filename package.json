@@ -11,7 +11,7 @@
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test tests/unit/*.test.ts",
+    "test": "node --import tsx --test tests/unit/*.test.ts",
     "test:e2e": "playwright test",
     "mobile:install": "npm --prefix apps/mobile install --no-audit --no-fund && node scripts/sync-mobile-core.mjs",
     "mobile:start": "npm --prefix apps/mobile start",
@@ -26,22 +26,25 @@
     "mobile:qa:export": "node scripts/sync-mobile-core.mjs && node scripts/mobile-qa-export.mjs",
     "test:mobile-ui": "playwright test --config playwright.mobile.config.ts",
     "verify:web": "node scripts/verify-web.mjs",
-    "verify:mobile": "node scripts/verify-mobile.mjs"
+    "verify:mobile": "node scripts/verify-mobile.mjs",
+    "search:budget": "node scripts/search-budget.mjs"
   },
   "dependencies": {
+    "@food-map/registration": "file:packages/registration",
     "@hookform/resolvers": "^5.4.0",
     "@prisma/client": "^6.19.3",
     "@tanstack/react-query": "^5.101.0",
+    "google-auth-library": "^11.3.3",
     "next": "16.2.9",
     "prisma": "^6.19.3",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-hook-form": "^7.79.0",
     "zod": "^4.4.3",
-    "zustand": "^5.0.14",
-    "@food-map/registration": "file:packages/registration"
+    "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -54,8 +57,7 @@
     "prettier-plugin-tailwindcss": "^0.8.0",
     "tailwindcss": "^4",
     "tsx": "^4.22.4",
-    "typescript": "^5",
-    "@playwright/test": "^1.58.2"
+    "typescript": "^5"
   },
   "packageManager": "pnpm@12.18.0+sha512.9d7882d5dc82147ecfc4e062aa34834e0ad0296710a1837a1115ae012127d36b7109e321ac1598a1dd0a65597681b1e99917e12ed0d749eae91187943363beb3"
 }
