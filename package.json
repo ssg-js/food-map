@@ -27,7 +27,9 @@
     "test:mobile-ui": "playwright test --config playwright.mobile.config.ts",
     "verify:web": "node scripts/verify-web.mjs",
     "verify:mobile": "node scripts/verify-mobile.mjs",
-    "search:budget": "node scripts/search-budget.mjs"
+    "search:budget": "node scripts/search-budget.mjs",
+    "test:product": "node scripts/product-test-run.mjs",
+    "test:integration": "node scripts/integration-test-run.mjs"
   },
   "dependencies": {
     "@food-map/registration": "file:packages/registration",

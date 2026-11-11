@@ -65,3 +65,15 @@ npm run test:e2e
 상세 결정과 검증 결과는 `docs/adr/2026-11-08-web-pwa-native-registration.md`, `docs/00_project-management/frontend-development-handoff.md`에서 확인합니다. 이 작업은 로컬 개발이며 배포하지 않습니다.
 
 공통 로직 수정 후에는 앱 개발 서버를 재시작하세요. 앱 시작/export 시 공통 패키지를 자동 동기화합니다. 네이티브 화면의 브라우저 검증은 `npm run mobile:qa:export` 후 `npm run test:mobile-ui`로 실행할 수 있습니다. 이 렌더러 검증은 iOS·Android 실기기 실행을 대체하지 않습니다.
+
+## 저장 목록과 관리
+
+- `/saved`: 저장한 맛집 목록, 음식·목적 필터, 지도, 수정/삭제.
+- `/categories`: 공용 카테고리 이름·분류 수정 및 삭제.
+- `/admin/api-usage`: 실제 내부 사용량과 보호 설정.
+- 앱의 저장 목록·분류 관리 메뉴에서도 같은 기능을 제공한다.
+- 수정·삭제는 각 화면의 관리자 접근 키 입력으로 권한을 확인한다. 키는 `.env`의 `ADMIN_ACCESS_KEY`이며 공유/커밋하지 않는다.
+- 로컬 DB가 켜진 상태에서 `npm run test:product`는 분리 스키마와 실제 서버를 사용하고 검증 후 스키마를 정리한다. Google만 테스트 응답으로 대체한다.
+- `npm run test:integration`은 분리 스키마에서 migration·동시 한도 검증을 실행한다.
+- 실제 지도 연결은 `localhost:3000`에서 확인했다. 휴대폰 LAN 주소/다른 포트/배포 주소는 Google 키의 HTTP referrer 허용 목록에 추가해야 한다.
+- 자세한 구현 범위와 네이티브 실행 한계는 `docs/features/native-selected-map.md`와 `docs/features/saved-restaurants-and-filters.md`를 참고한다.

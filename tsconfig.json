@@ -35,6 +35,7 @@
     "apps/mobile",
     "tests",
     "playwright.config.ts",
-    "playwright.mobile.config.ts"
+    "playwright.mobile.config.ts",
+    "playwright.product.config.ts"
   ]
 }
