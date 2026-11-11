@@ -42,6 +42,8 @@ export function loadGoogleMaps(): Promise<GoogleMapsApi> {
       return;
     }
 
+    window.gm_authFailure = () =>
+      window.dispatchEvent(new Event("food-map-google-auth-error"));
     const script = document.createElement("script");
     const searchParams = new URLSearchParams({
       key: getGoogleMapsApiKey(),

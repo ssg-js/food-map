@@ -50,10 +50,7 @@ export interface GoogleMarker {
   setMap(map: GoogleMap | null): void;
   setPosition(position: GoogleLatLngLiteral): void;
   setTitle(title: string): void;
-  addListener(
-    eventName: "click",
-    handler: () => void,
-  ): GoogleMapsEventListener;
+  addListener(eventName: "click", handler: () => void): GoogleMapsEventListener;
 }
 
 export interface GoogleMapsApi {
@@ -79,6 +76,7 @@ export interface GoogleMapsApi {
 
 declare global {
   interface Window {
+    gm_authFailure?: () => void;
     google?: {
       maps?: GoogleMapsApi;
     };

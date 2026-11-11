@@ -6,7 +6,11 @@ export async function GET(request: Request) {
   return handlePlaceSearch(request, {
     enabled: process.env.GOOGLE_PLACES_ENABLED === "true",
     apiKey: process.env.GOOGLE_PLACES_API_KEY,
-    reserve: () => reserveSearchRequest(prisma),
+    reserve: () =>
+      reserveSearchRequest(
+        prisma,
+        process.env.GOOGLE_SEARCH_LIMITS_DISABLED !== "true",
+      ),
     fetcher: fetch,
   });
 }

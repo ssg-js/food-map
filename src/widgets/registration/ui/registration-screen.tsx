@@ -4,7 +4,9 @@ import { PlaceRegistrationPanel } from "@/features/place-registration/components
 import { Icon } from "@/shared/ui/icon";
 import { InstallAppButton } from "@/features/pwa/components/InstallAppButton";
 export function RegistrationScreen() {
-  const hasMapKey = Boolean(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) && process.env.GOOGLE_MAPS_BROWSER_ENABLED === "true";
+  const hasMapKey =
+    Boolean(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) &&
+    process.env.GOOGLE_MAPS_BROWSER_ENABLED === "true";
   return (
     <div className="food-map-app">
       <a href="#registration" className="skip-link">
@@ -19,6 +21,10 @@ export function RegistrationScreen() {
         </Link>
         <span className="header-divider" />
         <p className="header-description">발견한 맛집을 카테고리로 정리해요</p>
+        <nav className="catalog-nav" aria-label="서비스 메뉴">
+          <Link href="/saved">저장한 맛집</Link>
+          <Link href="/categories">카테고리 관리</Link>
+        </nav>
         <InstallAppButton />
       </header>
       <main className="workspace">
@@ -27,19 +33,9 @@ export function RegistrationScreen() {
           className={`map-pane${hasMapKey ? "" : " map-placeholder"}`}
           aria-label="주변 지도"
         >
-          <SelectedPlaceMap apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? ""} />
-          <div className="map-notice">
-            <span className="notice-icon">
-              <Icon name="pin" />
-            </span>
-            <div>
-              <h2>지도 미리보기</h2>
-              <p>등록한 맛집의 지도 표시는 준비 중이에요.</p>
-            </div>
-          </div>
-          <span className="map-status-tag">
-            {hasMapKey ? "주변 지도" : "예시 배경 · 실제 지도가 아니에요"}
-          </span>
+          <SelectedPlaceMap
+            apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? ""}
+          />
         </section>
       </main>
     </div>

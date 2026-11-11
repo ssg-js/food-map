@@ -1,3 +1,5 @@
+import { requireOperator } from "@/shared/lib/operator-access";
+import { listCatalog } from "@/shared/lib/catalog";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -7,13 +9,15 @@ import { prisma } from "@/shared/lib/prisma";
 const RESTAURANT_RESULT_LIMIT = 200;
 
 const saveRestaurantBodySchema = z.object({
-  googlePlaceId: z.string(),
-  categoryIds: z.array(z.string()),
+  googlePlaceId: z.string().trim().min(1).max(512),
+  expectedUpdatedAt: z.string().datetime().optional(),
+  categoryIds: z.array(z.string().trim().min(1).max(100)).max(100),
 });
 
 const restaurantSelect = {
   id: true,
   googlePlaceId: true,
+  updatedAt: true,
   categories: {
     select: {
       category: {
@@ -29,33 +33,56 @@ const restaurantSelect = {
 interface RestaurantRecord {
   id: string;
   googlePlaceId: string;
-  categories: { category: { id: string; name: string; kind: "FOOD" | "PURPOSE" | "UNCLASSIFIED" } }[];
+  updatedAt: Date;
+  categories: {
+    category: {
+      id: string;
+      name: string;
+      kind: "FOOD" | "PURPOSE" | "UNCLASSIFIED";
+    };
+  }[];
 }
 
 /** Thrown inside the save transaction when a requested category does not exist. */
 class UnknownCategoryError extends Error {}
+class OperatorRequiredError extends Error {}
+class StaleRestaurantError extends Error {}
 
 function toRestaurant(record: RestaurantRecord): Restaurant {
   return {
     id: record.id,
     googlePlaceId: record.googlePlaceId,
+    updatedAt: record.updatedAt.toISOString(),
     categories: record.categories.map(({ category }) => category),
   };
 }
 
 function normalizeCategoryIds(categoryIds: string[]): string[] {
   return [
-    ...new Set(categoryIds.map((categoryId) => categoryId.trim()).filter(Boolean)),
+    ...new Set(
+      categoryIds.map((categoryId) => categoryId.trim()).filter(Boolean),
+    ),
   ];
 }
 
 export async function GET(request: Request) {
   try {
-    const placeId = new URL(request.url).searchParams.get("placeId");
+    const url = new URL(request.url);
+    if (url.searchParams.has("page")) return await listCatalog(url);
+    const placeId = url.searchParams.get("placeId");
     if (placeId !== null) {
-      if (!placeId.trim() || placeId.length > 512) return NextResponse.json({ message: "장소 ID가 올바르지 않습니다." }, { status: 400 });
-      const restaurant = await prisma.restaurant.findUnique({ where: { googlePlaceId: placeId }, select: restaurantSelect });
-      return NextResponse.json(restaurant ? toRestaurant(restaurant) : null, { headers: { "Cache-Control": "no-store" } });
+      if (!placeId.trim() || placeId.length > 512)
+        return NextResponse.json(
+          { message: "장소 ID가 올바르지 않습니다." },
+          { status: 400 },
+        );
+      const restaurant = await prisma.restaurant.findUnique({
+        where: { googlePlaceId: placeId },
+        select: restaurantSelect,
+      });
+      return NextResponse.json(restaurant ? toRestaurant(restaurant) : null, {
+        headers: { "Cache-Control": "no-store" },
+      });
     }
     const restaurants = await prisma.restaurant.findMany({
       orderBy: { createdAt: "asc" },
@@ -105,6 +132,7 @@ export async function POST(request: Request) {
   }
 
   const categoryIds = normalizeCategoryIds(parsedBody.data.categoryIds);
+  const operatorDenied = await requireOperator(request);
 
   try {
     const restaurant = await prisma.$transaction(async (tx) => {
@@ -119,12 +147,36 @@ export async function POST(request: Request) {
         }
       }
 
-      const saved = await tx.restaurant.upsert({
+      const previous = await tx.restaurant.findUnique({
         where: { googlePlaceId },
-        update: {},
-        create: { googlePlaceId },
-        select: { id: true },
+        select: { id: true, updatedAt: true },
       });
+      if (previous && operatorDenied) throw new OperatorRequiredError();
+      if (previous) {
+        if (!parsedBody.data.expectedUpdatedAt)
+          throw new StaleRestaurantError();
+        const changed = await tx.restaurant.updateMany({
+          where: {
+            id: previous.id,
+            updatedAt: new Date(parsedBody.data.expectedUpdatedAt),
+          },
+          data: {
+            updatedAt: new Date(
+              Math.max(
+                Date.now(),
+                Date.parse(parsedBody.data.expectedUpdatedAt) + 1,
+              ),
+            ),
+          },
+        });
+        if (!changed.count) throw new StaleRestaurantError();
+      }
+      const saved =
+        previous ??
+        (await tx.restaurant.create({
+          data: { googlePlaceId },
+          select: { id: true },
+        }));
 
       await tx.restaurantCategory.deleteMany({
         where:
@@ -151,6 +203,15 @@ export async function POST(request: Request) {
 
     return NextResponse.json(toRestaurant(restaurant));
   } catch (error) {
+    if (error instanceof StaleRestaurantError)
+      return NextResponse.json(
+        {
+          message:
+            "다른 화면에서 변경됐어요. 장소를 다시 선택한 뒤 저장해주세요.",
+        },
+        { status: 409 },
+      );
+    if (error instanceof OperatorRequiredError) return operatorDenied!;
     if (error instanceof UnknownCategoryError) {
       return NextResponse.json(
         { message: "존재하지 않는 카테고리가 포함되어 있습니다." },

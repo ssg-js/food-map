@@ -2,6 +2,8 @@ export interface Place {
   placeId: string;
   name: string;
   address: string;
+  location?: { latitude: number; longitude: number };
+  attributions?: { provider?: string; providerUri?: string }[];
 }
 export type CategoryKind = "FOOD" | "PURPOSE" | "UNCLASSIFIED";
 export type EditableCategoryKind = Exclude<CategoryKind, "UNCLASSIFIED">;
@@ -9,13 +11,17 @@ export interface Category {
   id: string;
   name: string;
   kind: CategoryKind;
+  updatedAt?: string;
+  _count?: { restaurants: number };
 }
 export interface Restaurant {
   id: string;
   googlePlaceId: string;
+  updatedAt?: string;
   categories: Category[];
 }
 export interface SaveInput {
+  expectedUpdatedAt?: string;
   googlePlaceId: string;
   categoryIds: string[];
 }
@@ -54,12 +60,27 @@ function isRestaurant(value: unknown): value is Restaurant {
 }
 
 export class RegistrationApiError extends Error {
-  constructor(message: string, public status: number, public code?: string, public resetAt?: string) {
-    super(message); this.name = "RegistrationApiError";
+  constructor(
+    message: string,
+    public status: number,
+    public code?: string,
+    public resetAt?: string,
+  ) {
+    super(message);
+    this.name = "RegistrationApiError";
   }
 }
 export function isSearchBlocked(error: unknown): error is RegistrationApiError {
-  return error instanceof RegistrationApiError && ["SEARCH_LIMIT_REACHED", "SEARCH_PROVIDER_LIMIT", "SEARCH_BUDGET_UNCONFIGURED", "SEARCH_BUDGET_UNAVAILABLE", "SEARCH_DISABLED"].includes(error.code ?? "");
+  return (
+    error instanceof RegistrationApiError &&
+    [
+      "SEARCH_LIMIT_REACHED",
+      "SEARCH_PROVIDER_LIMIT",
+      "SEARCH_BUDGET_UNCONFIGURED",
+      "SEARCH_BUDGET_UNAVAILABLE",
+      "SEARCH_DISABLED",
+    ].includes(error.code ?? "")
+  );
 }
 
 /** Same DTO contract for web and native. No Google content is persisted on device. */
@@ -85,7 +106,9 @@ export function createRegistrationApi(
             : "요청을 처리하지 못했어요. 잠시 후 다시 시도해주세요.",
           response.status,
           record(body) && typeof body.code === "string" ? body.code : undefined,
-          record(body) && typeof body.resetAt === "string" ? body.resetAt : undefined,
+          record(body) && typeof body.resetAt === "string"
+            ? body.resetAt
+            : undefined,
         );
       }
       return body;
@@ -125,7 +148,10 @@ export function createRegistrationApi(
         throw new Error("카테고리 응답을 확인하지 못했어요.");
       return body.items;
     },
-    async createCategory(input: { name: string; kind: EditableCategoryKind }): Promise<Category> {
+    async createCategory(input: {
+      name: string;
+      kind: EditableCategoryKind;
+    }): Promise<Category> {
       const normalized = normalizeCategoryName(input.name);
       if (!normalized || normalized.length > MAX_CATEGORY_LENGTH)
         throw new Error(
@@ -141,8 +167,11 @@ export function createRegistrationApi(
       return body;
     },
     async findSaved(placeId: string): Promise<Restaurant | null> {
-      const body = await request(`/api/restaurants?${new URLSearchParams({ placeId })}`);
-      if (body !== null && !isRestaurant(body)) throw new Error("저장된 카테고리를 확인하지 못했어요.");
+      const body = await request(
+        `/api/restaurants?${new URLSearchParams({ placeId })}`,
+      );
+      if (body !== null && !isRestaurant(body))
+        throw new Error("저장된 카테고리를 확인하지 못했어요.");
       return body;
     },
     async save(input: SaveInput): Promise<Restaurant> {
