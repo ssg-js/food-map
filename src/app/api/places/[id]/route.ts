@@ -1,13 +1,13 @@
-import {externalMode,placesFetch} from "@/shared/lib/google-places/provider";
-import { prisma } from "@/shared/lib/prisma";
-import {
-  reserveSearchRequest,
-  SearchBlockedError,
-} from "@/shared/lib/google-places/search-budget";
+import { externalMode, placesFetch } from "@/shared/lib/google-places/provider";
+import { access } from "@/shared/lib/personal-access";
+import { reservePersonalRequest } from "@/shared/lib/google-places/personal-budget";
+import { SearchBlockedError } from "@/shared/lib/google-places/search-budget";
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const a = await access(_request);
+  if (a.denied) return a.denied;
   const { id } = await params;
   const headers = { "Cache-Control": "no-store" };
   if (!id.trim() || id.length > 512)
@@ -16,18 +16,16 @@ export async function GET(
       { status: 400, headers },
     );
   if (
-    externalMode()==="live" && (process.env.GOOGLE_PLACES_ENABLED !== "true" ||
-    !process.env.GOOGLE_PLACES_API_KEY)
+    externalMode() === "live" &&
+    (process.env.GOOGLE_PLACES_ENABLED !== "true" ||
+      !process.env.GOOGLE_PLACES_API_KEY)
   )
     return Response.json(
       { message: "장소 정보 조회를 준비 중이에요." },
       { status: 503, headers },
     );
   try {
-    if(externalMode()==="live")await reserveSearchRequest(
-      prisma,
-      process.env.GOOGLE_SEARCH_LIMITS_DISABLED !== "true",
-    );
+    await reservePersonalRequest(a.user.id, "DETAILS");
     const url = new URL(
       `https://places.googleapis.com/v1/places/${encodeURIComponent(id)}`,
     );
@@ -37,7 +35,10 @@ export async function GET(
       redirect: "error",
       signal: AbortSignal.any([AbortSignal.timeout(10000), _request.signal]),
       headers: {
-        "X-Goog-Api-Key": process.env.GOOGLE_PLACES_API_KEY??"mock",
+        "X-Goog-Api-Key":
+          externalMode() === "mock"
+            ? "mock"
+            : process.env.GOOGLE_PLACES_API_KEY!,
         "X-Goog-FieldMask":
           "id,displayName.text,formattedAddress,location,attributions",
       },
@@ -78,7 +79,15 @@ export async function GET(
             : "장소 정보를 가져오지 못했어요.",
         code: e instanceof SearchBlockedError ? e.code : undefined,
       },
-      { status: e instanceof SearchBlockedError ? 429 : 502, headers },
+      {
+        status:
+          e instanceof SearchBlockedError
+            ? e.code === "SEARCH_LIMIT_REACHED"
+              ? 429
+              : 503
+            : 502,
+        headers,
+      },
     );
   }
 }

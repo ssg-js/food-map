@@ -18,7 +18,7 @@ test(
     const db = new PrismaClient({ datasourceUrl: url });
     const qualified = (sql: string) =>
       sql.replace(
-        /"(RestaurantCategory|Restaurant|Category|GoogleSearchBudget|GoogleSearchDailyUsage|GoogleMonitoringSnapshot|CategoryKind)"/g,
+        /"(RestaurantCategory|Restaurant|Category|GoogleSearchBudget|GoogleSearchDailyUsage|GoogleMonitoringSnapshot|CategoryKind|User|Session|Account|Verification|BootstrapState|LoginAttempt|ApiUsage)"/g,
         `"${schema}"."$1"`,
       );
     try {
@@ -63,17 +63,64 @@ test(
       );
       for (const statement of versionSql.split(";").filter((s) => s.trim()))
         await db.$executeRawUnsafe(qualified(statement));
+      const personalSql = await readFile(
+        "prisma/migrations/20261114000000_personal_accounts/migration.sql",
+        "utf8",
+      );
+      for (const statement of personalSql
+        .split(";")
+        .filter((s) => s.replace(/^--.*$/gm, "").trim()))
+        await db.$executeRawUnsafe(qualified(statement));
+      assert.equal(
+        (await db.restaurant.findUniqueOrThrow({ where: { id: "r" } })).ownerId,
+        "__legacy_quarantine__",
+      );
+      assert.equal(
+        (await db.restaurantCategory.findFirstOrThrow()).ownerId,
+        "__legacy_quarantine__",
+      );
+      await db.user.create({
+        data: { id: "other", name: "Other", email: "other@local.invalid" },
+      });
+      const foreign = await db.category.create({
+        data: { ownerId: "other", name: "Other", kind: "DISH" },
+      });
+      await assert.rejects(
+        db.restaurantCategory.create({
+          data: {
+            ownerId: "__legacy_quarantine__",
+            restaurantId: "r",
+            categoryId: foreign.id,
+          },
+        }),
+      );
       assert.equal(
         (await db.category.findUniqueOrThrow({ where: { id: "legacy" } })).kind,
         "UNCLASSIFIED",
       );
       assert.equal(await db.restaurantCategory.count(), 1);
-      await db.category.create({ data: { name: "같은 이름", kind: "FOOD" } });
       await db.category.create({
-        data: { name: "같은 이름", kind: "PURPOSE" },
+        data: {
+          ownerId: "__legacy_quarantine__",
+          name: "같은 이름",
+          kind: "FOOD",
+        },
+      });
+      await db.category.create({
+        data: {
+          ownerId: "__legacy_quarantine__",
+          name: "같은 이름",
+          kind: "PURPOSE",
+        },
       });
       await assert.rejects(
-        db.category.create({ data: { name: "같은 이름", kind: "FOOD" } }),
+        db.category.create({
+          data: {
+            ownerId: "__legacy_quarantine__",
+            name: "같은 이름",
+            kind: "FOOD",
+          },
+        }),
       );
       await assert.rejects(
         reserveSearchRequest(db),

@@ -24,7 +24,7 @@ export const categoryInput = z.object({
     .string()
     .transform((s) => s.trim().replace(/\s+/g, " "))
     .pipe(z.string().min(1).max(20)),
-  kind: z.enum(["FOOD", "PURPOSE"]),
+  kind: z.enum(["FOOD", "PURPOSE", "DISH"]),
   expectedUpdatedAt: versionSchema,
 });
 export function flattenRestaurant(
@@ -46,40 +46,45 @@ export function apiError(error: unknown) {
     { status: 500 },
   );
 }
-export async function listCatalog(url: URL) {
-  const rawPage = url.searchParams.get("page") ?? "1";
-  if (!/^\d+$/.test(rawPage) || Number(rawPage) < 1 || Number(rawPage) > 100000)
+export async function listCatalog(url: URL, ownerId: string) {
+  const page = Number(url.searchParams.get("page") || 1),
+    pageSize = 12;
+  if (!Number.isSafeInteger(page) || page < 1 || page > 100000)
     return Response.json(
-      { message: "페이지가 올바르지 않아요." },
+      { message: "페이지를 확인해주세요." },
       { status: 400 },
     );
-  const page = Number(rawPage),
-    pageSize = 12;
-  const food = url.searchParams.getAll("food").filter(Boolean),
-    purpose = url.searchParams.getAll("purpose").filter(Boolean);
-  if (food.length + purpose.length > 100)
+  const groups = [
+    ["food", "FOOD"],
+    ["purpose", "PURPOSE"],
+    ["dish", "DISH"],
+  ] as const;
+  const filters = groups.map(([key, kind]) => ({
+    ids: url.searchParams.getAll(key).filter(Boolean),
+    kind,
+  }));
+  if (filters.reduce((n, f) => n + f.ids.length, 0) > 100)
     return Response.json({ message: "필터가 너무 많아요." }, { status: 400 });
+  const q = (url.searchParams.get("q") || "").trim().slice(0, 100);
   const where: Prisma.RestaurantWhereInput = {
+    ownerId,
     AND: [
-      ...(food.length
+      ...filters
+        .filter((f) => f.ids.length)
+        .map((f) => ({
+          categories: {
+            some: { categoryId: { in: f.ids }, category: { kind: f.kind } },
+          },
+        })),
+      ...(q
         ? [
             {
               categories: {
                 some: {
-                  categoryId: { in: food },
-                  category: { kind: "FOOD" as const },
-                },
-              },
-            },
-          ]
-        : []),
-      ...(purpose.length
-        ? [
-            {
-              categories: {
-                some: {
-                  categoryId: { in: purpose },
-                  category: { kind: "PURPOSE" as const },
+                  category: {
+                    name: { contains: q, mode: "insensitive" as const },
+                    kind: { not: "UNCLASSIFIED" as const },
+                  },
                 },
               },
             },
@@ -99,6 +104,6 @@ export async function listCatalog(url: URL) {
   ]);
   return Response.json(
     { items: rows.map(flattenRestaurant), total, page, pageSize },
-    { headers: { "Cache-Control": "no-store" } },
+    { headers: { "Cache-Control": "private, no-store" } },
   );
 }

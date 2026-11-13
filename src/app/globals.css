@@ -1617,3 +1617,7 @@ button:disabled[aria-pressed="true"] {
 .admin-sidebar nav a:not([aria-current]):hover {
   background: #333d4b;
 }
+
+.account-page{min-height:100dvh;display:grid;place-items:center;background:#f2f4f6;padding:24px}.account-card{width:min(100%,420px);padding:32px;background:white;border-radius:24px;display:grid;gap:18px}.account-card h1{font-size:28px;font-weight:750}.account-card label{display:grid;gap:8px}.account-card input:not([type=checkbox]){width:100%;padding:14px;border:1px solid #d1d6db;border-radius:12px}.account-card p{color:#6b7684;font-size:14px}.account-card .account-check{display:flex;align-items:center;gap:8px}
+
+.catalog-access{display:flex;align-items:center;gap:16px;flex-wrap:wrap}.account-card p[role=alert]{color:#d32f2f}

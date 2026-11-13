@@ -1,5 +1,12 @@
-import { isAdmin } from "@/shared/lib/admin-access";
+import { requirePageUser } from "@/shared/lib/personal-access";
+import { notFound } from "next/navigation";
 import { AdminDashboard } from "@/widgets/admin/ui/AdminDashboard";
-import { AdminLogin } from "@/features/admin/components/AdminLogin";
-export const metadata = { title: "API 사용량 · 맛집지도 관리자", robots: {index:false,follow:false} };
-export default async function AdminUsagePage() { return await isAdmin() ? <AdminDashboard /> : <AdminLogin />; }
+export const metadata = {
+  title: "API 사용량 · 맛집지도",
+  robots: { index: false, follow: false },
+};
+export default async function Admin() {
+  const u = await requirePageUser();
+  if (u.role !== "OPERATOR") notFound();
+  return <AdminDashboard />;
+}

@@ -15,62 +15,155 @@ datasource db {
 
 model Restaurant {
   id            String   @id @default(cuid())
-  googlePlaceId String   @unique
+  googlePlaceId String
+  ownerId       String
+  owner         User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   categories RestaurantCategory[]
+
+  @@unique([ownerId, googlePlaceId])
+  @@unique([ownerId, id])
+  @@index([ownerId, createdAt])
 }
 
 model Category {
-  id        String   @id @default(cuid())
+  ownerId   String
+  owner     User         @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  id        String       @id @default(cuid())
   name      String
   kind      CategoryKind @default(UNCLASSIFIED)
-  updatedAt DateTime @default(now()) @updatedAt
-  createdAt DateTime @default(now())
+  updatedAt DateTime     @default(now()) @updatedAt
+  createdAt DateTime     @default(now())
 
   restaurants RestaurantCategory[]
 
-  @@unique([kind, name])
+  @@unique([ownerId, kind, name])
+  @@unique([ownerId, id])
 }
 
 model RestaurantCategory {
+  ownerId      String
   restaurantId String
   categoryId   String
 
-  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-  category   Category   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  restaurant Restaurant @relation(fields: [ownerId, restaurantId], references: [ownerId, id], onDelete: Cascade)
+  category   Category   @relation(fields: [ownerId, categoryId], references: [ownerId, id], onDelete: Cascade)
 
   @@id([restaurantId, categoryId])
   @@index([categoryId])
 }
 
-
 enum CategoryKind {
   FOOD
   PURPOSE
+  DISH
   UNCLASSIFIED
 }
 
 // One shared budget across all server instances and API keys. Never auto-created.
 model GoogleSearchBudget {
-  month      String @id
+  month      String   @id
   used       Int
   limit      Int
-  day        String @default("")
-  dailyUsed  Int @default(0)
-  dailyLimit Int @default(100)
+  day        String   @default("")
+  dailyUsed  Int      @default(0)
+  dailyLimit Int      @default(100)
   updatedAt  DateTime @default(now()) @updatedAt
 }
 
 model GoogleSearchDailyUsage {
-  day String @id
-  used Int @default(0)
+  day  String @id
+  used Int    @default(0)
 }
+
 model GoogleMonitoringSnapshot {
-  id String @id
+  id        String   @id
   projectId String
-  month String
-  payload Json
+  month     String
+  payload   Json
   fetchedAt DateTime @default(now())
+}
+
+model User {
+  id              String       @id
+  name            String
+  email           String       @unique
+  emailVerified   Boolean      @default(false)
+  image           String?
+  username        String?      @unique
+  displayUsername String?
+  role            String       @default("USER")
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @default(now()) @updatedAt
+  sessions        Session[]
+  accounts        Account[]
+  restaurants     Restaurant[]
+  categories      Category[]
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @default(now()) @updatedAt
+
+  @@index([userId])
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
+
+  @@index([identifier])
+}
+
+model BootstrapState {
+  id    String @id
+  state String @default("READY")
+}
+
+model LoginAttempt {
+  id    String @id
+  count Int    @default(0)
+}
+
+model ApiUsage {
+  id     String @id
+  mode   String
+  api    String
+  scope  String
+  period String
+  count  Int    @default(0)
+
+  @@index([mode, scope, period])
 }
