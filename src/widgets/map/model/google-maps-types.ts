@@ -26,6 +26,10 @@ export interface GoogleMapMouseEvent {
 }
 
 export interface GoogleMap {
+  fitBounds?(
+    bounds: { north: number; south: number; east: number; west: number },
+    padding: number,
+  ): void;
   setCenter(center: GoogleLatLngLiteral): void;
   getCenter(): {
     lat(): number;

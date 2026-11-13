@@ -1,3 +1,4 @@
+import { sessionHeaders, setSessionToken } from "./session";
 import {
   RegistrationApiError,
   type Place,
@@ -14,9 +15,11 @@ export interface CatalogPage {
 export interface CatalogFilters {
   food: string[];
   purpose: string[];
+  dish?: string[];
+  q?: string;
   page: number;
 }
-let operatorToken = "";
+
 export function createCatalogApi(baseUrl = "", fetcher: typeof fetch = fetch) {
   const origin = baseUrl.replace(/\/+$/, "");
   async function request(path: string, init?: RequestInit): Promise<unknown> {
@@ -33,9 +36,7 @@ export function createCatalogApi(baseUrl = "", fetcher: typeof fetch = fetch) {
         signal: controller.signal,
         headers: {
           ...(init?.body ? { "Content-Type": "application/json" } : {}),
-          ...(operatorToken
-            ? { Authorization: `Bearer ${operatorToken}` }
-            : {}),
+          ...sessionHeaders(),
           ...init?.headers,
         },
       });
@@ -65,6 +66,8 @@ export function createCatalogApi(baseUrl = "", fetcher: typeof fetch = fetch) {
       const q = new URLSearchParams({ page: String(filters.page) });
       filters.food.forEach((id) => q.append("food", id));
       filters.purpose.forEach((id) => q.append("purpose", id));
+      filters.dish?.forEach((id) => q.append("dish", id));
+      if (filters.q) q.set("q", filters.q);
       const body = (await request(`/api/restaurants?${q}`)) as CatalogPage;
       if (!Array.isArray(body?.items) || typeof body.total !== "number")
         throw new Error("목록 응답을 확인해주세요.");
@@ -115,27 +118,26 @@ export function createCatalogApi(baseUrl = "", fetcher: typeof fetch = fetch) {
         { method: "DELETE" },
       );
     },
-    async login(key: string) {
-      const result = (await request("/api/admin/session", {
+    async login(username: string, password: string) {
+      const r = (await request("/api/auth/login", {
         method: "POST",
         headers: origin ? { "x-food-map-client": "native" } : {},
-        body: JSON.stringify({ key }),
+        body: JSON.stringify({ username, password }),
       })) as { token?: string };
-      operatorToken = result.token ?? "";
+      setSessionToken(r.token || "");
+      return r.token || "";
+    },
+    async session() {
+      return request("/api/auth/session") as Promise<{
+        user: { id: string; username: string; role: string } | null;
+      }>;
     },
     async authenticated() {
-      if (operatorToken) return true;
-      const result = (await request("/api/admin/session")) as {
-        authenticated: boolean;
-      };
-      return result.authenticated;
+      return !!(await this.session()).user;
     },
     async logout() {
-      operatorToken = "";
-      await request("/api/admin/session", {
-        method: "DELETE",
-        headers: origin ? { "x-food-map-client": "native" } : {},
-      });
+      await request("/api/auth/logout", { method: "POST" });
+      setSessionToken("");
     },
   };
 }

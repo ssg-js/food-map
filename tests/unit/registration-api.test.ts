@@ -32,7 +32,7 @@ test("invalid payloads are rejected rather than rendered", async () => {
   await assert.rejects(api.search("국수"), /응답/);
   await assert.rejects(api.categories(), /응답/);
 });
-test("category normalization matches backend rules and optional category save stays supported", async () => {
+test("category normalization matches backend and save requires at least one category", async () => {
   const requests: { path: string; body: unknown }[] = [];
   const api = createRegistrationApi("", async (path, init) => {
     requests.push({ path: String(path), body: JSON.parse(String(init?.body)) });
@@ -41,10 +41,17 @@ test("category normalization matches backend rules and optional category save st
       : Response.json({ id: "r", googlePlaceId: "p", categories: [] });
   });
   assert.equal(normalizeCategoryName("  혼자   먹기  "), "혼자 먹기");
-  await api.createCategory({name:"  혼자   먹기  ",kind:"PURPOSE"});
-  await api.save({ googlePlaceId: "p", categoryIds: [] });
+  await api.createCategory({ name: "  혼자   먹기  ", kind: "PURPOSE" });
+  await assert.rejects(
+    api.save({ googlePlaceId: "p", categoryIds: [] }),
+    /하나 이상/,
+  );
+  await api.save({ googlePlaceId: "p", categoryIds: ["c"] });
   assert.deepEqual(requests[0].body, { name: "혼자 먹기", kind: "PURPOSE" });
-  assert.deepEqual(requests[1].body, { googlePlaceId: "p", categoryIds: [] });
+  assert.deepEqual(requests[1].body, {
+    googlePlaceId: "p",
+    categoryIds: ["c"],
+  });
 });
 test("category validation prevents unnecessary mutations", async () => {
   let requests = 0;
@@ -52,8 +59,11 @@ test("category validation prevents unnecessary mutations", async () => {
     requests++;
     return Response.json({});
   });
-  await assert.rejects(api.createCategory({name:" ",kind:"FOOD"}), /1~20/);
-  await assert.rejects(api.createCategory({name:"가".repeat(21),kind:"FOOD"}), /1~20/);
+  await assert.rejects(api.createCategory({ name: " ", kind: "FOOD" }), /1~20/);
+  await assert.rejects(
+    api.createCategory({ name: "가".repeat(21), kind: "FOOD" }),
+    /1~20/,
+  );
   assert.equal(requests, 0);
 });
 test("server errors preserve useful messages, non-JSON errors have a fallback", async () => {

@@ -5,8 +5,14 @@ import { useEffect, useState } from "react";
 export function SelectedPlaceMap({
   apiKey,
   selectedPlace,
+  points,
+  onSelect,
+  mode = "mock",
 }: {
   apiKey: string;
+  points?: Place[];
+  onSelect?: (p: Place) => void;
+  mode?: "mock" | "live";
   selectedPlace?: Place | null;
 }) {
   const [eventPlace, setPlace] = useState<{
@@ -14,7 +20,9 @@ export function SelectedPlaceMap({
     name: string;
     location?: { latitude: number; longitude: number };
   } | null>(null);
-  const place = selectedPlace === undefined ? eventPlace : selectedPlace;
+  const place =
+    (selectedPlace === undefined ? eventPlace : selectedPlace) ??
+    points?.find((p) => p.location);
   const [position, setPosition] = useState<{
     latitude: number;
     longitude: number;
@@ -78,8 +86,19 @@ export function SelectedPlaceMap({
         background: "#f2f4f6",
       }}
     >
-      {(position || place?.location) && apiKey ? (
+      {(position || place?.location) && (mode === "mock" || apiKey) ? (
         <GooglePointMap
+          mode={mode}
+          points={(position ? [] : points)?.flatMap((p) =>
+            p.location ? [{ id: p.placeId, title: p.name, ...p.location }] : [],
+          )}
+          onSelect={(id) => {
+            const p = points?.find((p) => p.placeId === id);
+            if (p) {
+              setPosition(null);
+              onSelect?.(p);
+            }
+          }}
           latitude={(position ?? place!.location!).latitude}
           longitude={(position ?? place!.location!).longitude}
           title={name ?? "선택 장소"}

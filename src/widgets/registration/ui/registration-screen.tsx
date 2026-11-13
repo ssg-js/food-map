@@ -1,3 +1,4 @@
+import { OperatorAccess } from "@/features/catalog/components/OperatorAccess";
 import { SelectedPlaceMap } from "@/features/map/components/SelectedPlaceMap";
 import Link from "next/link";
 import { PlaceRegistrationPanel } from "@/features/place-registration/components/PlaceRegistrationPanel";
@@ -27,13 +28,19 @@ export function RegistrationScreen() {
         </nav>
         <InstallAppButton />
       </header>
+      <div style={{ padding: "0 16px" }}>
+        <OperatorAccess />
+      </div>
       <main className="workspace">
-        <PlaceRegistrationPanel />
+        <div style={{ display: "contents" }}>
+          <PlaceRegistrationPanel />
+        </div>
         <section
           className={`map-pane${hasMapKey ? "" : " map-placeholder"}`}
           aria-label="주변 지도"
         >
           <SelectedPlaceMap
+            mode={process.env.EXTERNAL_API_MODE === "live" ? "live" : "mock"}
             apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? ""}
           />
         </section>

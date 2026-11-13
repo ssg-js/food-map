@@ -1,6 +1,11 @@
 "use client";
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import {
   createCatalogApi,
   type Restaurant,
@@ -31,7 +36,7 @@ function PlaceCard({
     gcTime: 0,
   });
   return (
-    <article className="saved-card">
+    <article className="saved-card" id={`place-${item.googlePlaceId}`}>
       <h2>
         {place.data?.name ??
           (place.isPending ? "장소를 불러오고 있어요" : "장소 정보 확인 필요")}
@@ -86,10 +91,19 @@ function PlaceCard({
     </article>
   );
 }
-export function SavedRestaurants({ mapKey }: { mapKey: string }) {
+export function SavedRestaurants({
+  mapKey,
+  mode = "mock",
+}: {
+  mapKey: string;
+  mode?: "mock" | "live";
+}) {
   const client = useQueryClient();
   const [food, setFood] = useState<string[]>([]),
     [purpose, setPurpose] = useState<string[]>([]),
+    [dish, setDish] = useState<string[]>([]),
+    [q, setQ] = useState(""),
+    [submittedQ, setSubmittedQ] = useState(""),
     [page, setPage] = useState(1),
     [selected, setSelected] = useState<Place | null>(null),
     [edit, setEdit] = useState<Restaurant | null>(null),
@@ -102,10 +116,21 @@ export function SavedRestaurants({ mapKey }: { mapKey: string }) {
     retry: false,
   });
   const list = useQuery({
-    queryKey: ["catalog", { food, purpose, page }],
-    queryFn: () => api.list({ food, purpose, page }),
+    queryKey: ["catalog", { food, purpose, dish, q: submittedQ, page }],
+    queryFn: () => api.list({ food, purpose, dish, q: submittedQ, page }),
     retry: false,
   });
+  const places = useQueries({
+    queries: (list.data?.items || []).map((item) => ({
+      queryKey: ["place-live", item.googlePlaceId],
+      queryFn: ({ signal }: { signal: AbortSignal }) =>
+        api.details(item.googlePlaceId, signal),
+      retry: false,
+      staleTime: Infinity,
+      gcTime: 0,
+    })),
+  });
+  const mapPlaces = places.flatMap((q) => (q.data ? [q.data] : []));
   const mutation = useMutation({
     mutationFn: async (input: { item: Restaurant; remove: boolean }) =>
       input.remove
@@ -125,8 +150,9 @@ export function SavedRestaurants({ mapKey }: { mapKey: string }) {
     },
     retry: false,
   });
-  function toggle(id: string, kind: "FOOD" | "PURPOSE") {
-    const update = kind === "FOOD" ? setFood : setPurpose;
+  function toggle(id: string, kind: "FOOD" | "PURPOSE" | "DISH") {
+    const update =
+      kind === "FOOD" ? setFood : kind === "DISH" ? setDish : setPurpose;
     update((values) =>
       values.includes(id) ? values.filter((x) => x !== id) : [...values, id],
     );
@@ -143,6 +169,7 @@ export function SavedRestaurants({ mapKey }: { mapKey: string }) {
   const kinds = [
     { kind: "FOOD", title: "음식 종류" },
     { kind: "PURPOSE", title: "방문 목적" },
+    { kind: "DISH", title: "대표 메뉴" },
   ] as const;
   return (
     <CatalogShell title="저장한 맛집">
@@ -151,6 +178,26 @@ export function SavedRestaurants({ mapKey }: { mapKey: string }) {
       </p>
       <OperatorAccess />
       <section className="catalog-filters" aria-label="저장한 맛집 필터">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            setSubmittedQ(q.trim());
+            setPage(1);
+            setSelected(null);
+          }}
+        >
+          <label htmlFor="saved-query">내 카테고리 이름으로 찾기</label>
+          <div className="input-row">
+            <input
+              id="saved-query"
+              className="catalog-input"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              maxLength={100}
+            />
+            <button className="button button-primary">찾기</button>
+          </div>
+        </form>
         {kinds.map((g) => (
           <div key={g.kind}>
             <h2>{g.title}</h2>
@@ -159,11 +206,14 @@ export function SavedRestaurants({ mapKey }: { mapKey: string }) {
                 ?.filter((c) => c.kind === g.kind)
                 .map((c) => (
                   <button
-                    className={`category-chip${(g.kind === "FOOD" ? food : purpose).includes(c.id) ? " is-selected" : ""}`}
+                    className={`category-chip${(g.kind === "FOOD" ? food : g.kind === "DISH" ? dish : purpose).includes(c.id) ? " is-selected" : ""}`}
                     key={c.id}
-                    aria-pressed={(g.kind === "FOOD" ? food : purpose).includes(
-                      c.id,
-                    )}
+                    aria-pressed={(g.kind === "FOOD"
+                      ? food
+                      : g.kind === "DISH"
+                        ? dish
+                        : purpose
+                    ).includes(c.id)}
                     onClick={() => toggle(c.id, g.kind)}
                   >
                     {c.name}
@@ -184,13 +234,18 @@ export function SavedRestaurants({ mapKey }: { mapKey: string }) {
           </p>
         )}
         <p className="field-help">
-          같은 그룹은 하나라도 포함, 음식과 목적은 모두 만족하는 맛집을 찾아요.
+          같은 그룹은 하나라도 포함, 음식·목적·대표 메뉴는 모두 만족하는 맛집을
+          찾아요.
         </p>
         <button
           className="text-button"
           onClick={() => {
             setFood([]);
             setPurpose([]);
+            setDish([]);
+            setQ("");
+            setSubmittedQ("");
+            setSelected(null);
             setPage(1);
           }}
         >
@@ -278,7 +333,18 @@ export function SavedRestaurants({ mapKey }: { mapKey: string }) {
           className="catalog-map"
           aria-label="선택한 저장 맛집 지도"
         >
-          <SelectedPlaceMap apiKey={mapKey} selectedPlace={selected} />
+          <SelectedPlaceMap
+            apiKey={mapKey}
+            mode={mode}
+            selectedPlace={selected}
+            points={mapPlaces}
+            onSelect={(p) => {
+              setSelected(p);
+              document
+                .getElementById(`place-${p.placeId}`)
+                ?.scrollIntoView({ behavior: "smooth", block: "center" });
+            }}
+          />
           {selected && <p className="sr-only">{selected.name} 선택됨</p>}
         </section>
       </div>
@@ -289,7 +355,7 @@ export function SavedRestaurants({ mapKey }: { mapKey: string }) {
             if (!mutation.isPending) setEdit(null);
           }}
         >
-          <p>선택한 카테고리로 공용 맛집 분류를 변경합니다.</p>
+          <p>선택한 카테고리로 내 맛집 분류를 변경합니다.</p>
           <div className="category-chips">
             {categories.data?.map((c: Category) => (
               <button
@@ -321,7 +387,13 @@ export function SavedRestaurants({ mapKey }: { mapKey: string }) {
             </button>
             <button
               className="button button-primary"
-              disabled={mutation.isPending || !categories.isSuccess}
+              disabled={
+                mutation.isPending ||
+                !categories.isSuccess ||
+                !categories.data.some(
+                  (c) => c.kind !== "UNCLASSIFIED" && ids.includes(c.id),
+                )
+              }
               onClick={() => mutation.mutate({ item: edit, remove: false })}
             >
               변경 저장
@@ -337,7 +409,7 @@ export function SavedRestaurants({ mapKey }: { mapKey: string }) {
           }}
         >
           <p>
-            이 공용 목록에서 맛집과 카테고리 연결이 삭제돼요. Google의 장소와
+            내 목록에서 맛집과 카테고리 연결이 삭제돼요. Google의 장소와
             카테고리 자체는 삭제하지 않아요.
           </p>
           {mutation.isError && <p role="alert">{mutation.error.message}</p>}

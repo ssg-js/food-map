@@ -40,7 +40,10 @@ export function PlaceRegistrationPanel() {
       aria-labelledby="registration-title"
       id="registration"
     >
-      <SearchNotice notice={flow.searchNotice} onClose={flow.dismissSearchNotice} />
+      <SearchNotice
+        notice={flow.searchNotice}
+        onClose={flow.dismissSearchNotice}
+      />
       <div className="panel-handle" aria-hidden="true" />
       <div className="panel-heading">
         <p className="eyebrow">나만의 발견, 함께 쓰는 맛집지도</p>
@@ -57,6 +60,27 @@ export function PlaceRegistrationPanel() {
         role="search"
         aria-label="맛집 장소 검색"
       >
+        <label htmlFor="food-query">음식 종류로 찾기</label>
+        <input
+          id="food-query"
+          className="catalog-input"
+          value={flow.foodQuery}
+          onChange={(e) => flow.setFoodQuery(e.target.value)}
+          placeholder="예: 한식, 이탈리안"
+          maxLength={80}
+        />
+        <label htmlFor="dish-query">대표 메뉴로 찾기</label>
+        <input
+          id="dish-query"
+          className="catalog-input"
+          value={flow.dishQuery}
+          onChange={(e) => flow.setDishQuery(e.target.value)}
+          placeholder="예: 돈카츠, 평양냉면"
+          maxLength={80}
+        />
+        <p className="field-help">
+          검색할 내용: {flow.composedQuery || "검색어를 입력해주세요"}
+        </p>
         <label htmlFor="place-search">장소 검색</label>
         <div className="input-row">
           <div className="search-field">
@@ -132,7 +156,7 @@ export function PlaceRegistrationPanel() {
                 <div className="empty-state compact" role="status">
                   <Icon name="search" width={28} height={28} />
                   <h3>일치하는 장소가 없어요</h3>
-                  <p>지역명과 맛집 이름을 함께 검색해보세요.</p>
+                  <p>상호명·지역·음식 종류·대표 메뉴로 검색해보세요.</p>
                 </div>
               ) : (
                 <ul className="candidate-list">
@@ -142,7 +166,14 @@ export function PlaceRegistrationPanel() {
                         place={place}
                         selected={flow.selectedPlace?.placeId === place.placeId}
                         disabled={flow.busy}
-                        onSelect={() => { flow.selectPlace(place); window.dispatchEvent(new CustomEvent("food-map-place", { detail: place })); }}
+                        onSelect={() => {
+                          flow.selectPlace(place);
+                          window.dispatchEvent(
+                            new CustomEvent("food-map-place", {
+                              detail: place,
+                            }),
+                          );
+                        }}
                       />
                     </li>
                   ))}
@@ -184,10 +215,21 @@ export function PlaceRegistrationPanel() {
               }}
             />
           )}
-          {flow.existing.isPending && <p role="status">저장된 카테고리를 확인하고 있어요.</p>}
-          {flow.existing.isError && <ErrorMessage message={flow.existing.error.message} onRetry={flow.retryExisting} />}
+          {flow.existing.isPending && (
+            <p role="status">저장된 카테고리를 확인하고 있어요.</p>
+          )}
+          {flow.existing.isError && (
+            <ErrorMessage
+              message={flow.existing.error.message}
+              onRetry={flow.retryExisting}
+            />
+          )}
           {flow.categories.isSuccess && <CategoryGroups flow={flow} />}
-          {flow.newCategoryName.trim() && <p className="field-help">입력한 카테고리를 추가하거나 취소한 뒤 저장해주세요.</p>}
+          {flow.newCategoryName.trim() && (
+            <p className="field-help">
+              입력한 카테고리를 추가하거나 취소한 뒤 저장해주세요.
+            </p>
+          )}
           {flow.validationMessage && (
             <p className="feedback" role="status">
               {flow.validationMessage}

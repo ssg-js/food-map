@@ -45,12 +45,13 @@ export function CategoryManager() {
   const groups = [
     { kind: "FOOD", title: "음식 종류" },
     { kind: "PURPOSE", title: "방문 목적" },
+    { kind: "DISH", title: "대표 메뉴" },
     { kind: "UNCLASSIFIED", title: "기존 카테고리 · 분류 전" },
   ] as const;
   return (
     <CatalogShell title="카테고리 관리">
       <p className="catalog-intro">
-        함께 사용하는 분류를 정리해요. 이름과 분류를 바꿔도 기존 맛집 연결은
+        내 계정의 분류를 정리해요. 이름과 분류를 바꿔도 기존 맛집 연결은
         유지돼요.
       </p>
       <OperatorAccess />
@@ -86,7 +87,7 @@ export function CategoryManager() {
                       action.reset();
                       setEditing(c);
                       setName(c.name);
-                      setKind(c.kind === "PURPOSE" ? "PURPOSE" : "FOOD");
+                      setKind(c.kind === "UNCLASSIFIED" ? "FOOD" : c.kind);
                     }}
                   >
                     이름·분류 수정
@@ -143,6 +144,7 @@ export function CategoryManager() {
             >
               <option value="FOOD">음식 종류</option>
               <option value="PURPOSE">방문 목적</option>
+              <option value="DISH">대표 메뉴</option>
             </select>
             <p className="field-help">
               연결된 맛집 {editing._count?.restaurants ?? 0}곳에 새 이름과

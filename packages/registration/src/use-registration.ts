@@ -16,6 +16,12 @@ export function useRegistration(api: RegistrationApi) {
   const queryClient = useQueryClient();
   const selectionVersion = useRef(0);
   const [searchInput, setSearchInput] = useState("");
+  const [foodQuery, setFoodQuery] = useState("");
+  const [dishQuery, setDishQuery] = useState("");
+  const composedQuery = [searchInput, foodQuery, dishQuery]
+    .map((v) => v.trim())
+    .filter(Boolean)
+    .join(" ");
   const [submittedQuery, setSubmittedQuery] = useState("");
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
@@ -55,6 +61,10 @@ export function useRegistration(api: RegistrationApi) {
     retry: false,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["restaurants"] });
+      void queryClient.invalidateQueries({ queryKey: ["catalog"] });
+      void queryClient.invalidateQueries({
+        queryKey: ["registration", "categories"],
+      });
     },
   });
   const existing = useMutation({
@@ -102,9 +112,13 @@ export function useRegistration(api: RegistrationApi) {
   const canSearch =
     !busy &&
     !search.isFetching &&
-    searchInput.trim().length >= MIN_SEARCH_LENGTH;
+    composedQuery.length >= MIN_SEARCH_LENGTH &&
+    composedQuery.length <= 200;
   const canSave =
     selectedPlace !== null &&
+    !!categories.data?.some(
+      (c) => selectedCategoryIds.includes(c.id) && c.kind !== "UNCLASSIFIED",
+    ) &&
     categories.isSuccess &&
     existing.isSuccess &&
     !busy &&
@@ -113,7 +127,7 @@ export function useRegistration(api: RegistrationApi) {
     !newCategoryName.trim();
   function submitSearch() {
     if (!canSearch) return;
-    const q = searchInput.trim();
+    const q = composedQuery;
     setSubmittedQuery(q);
     setSearchNotice(null);
     searchMutation.mutate(q);
@@ -201,6 +215,11 @@ export function useRegistration(api: RegistrationApi) {
     searchMutation.reset();
   }
   return {
+    foodQuery,
+    setFoodQuery,
+    dishQuery,
+    setDishQuery,
+    composedQuery,
     searchInput,
     setSearchInput,
     submittedQuery,

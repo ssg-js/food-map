@@ -4,3 +4,5 @@ export * from "./use-registration";
 export * from "./catalog-api";
 
 export * from "./mock-places";
+
+export { setSessionToken, sessionHeaders } from "./session";

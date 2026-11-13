@@ -45,6 +45,8 @@ export async function handlePlaceSearch(
         },
         body: JSON.stringify({
           textQuery: q,
+          includedType: "restaurant",
+          strictTypeFiltering: true,
           languageCode: "ko",
           pageSize: 10,
         }),

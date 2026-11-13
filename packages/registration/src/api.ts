@@ -1,3 +1,4 @@
+import { sessionHeaders } from "./session";
 export interface Place {
   placeId: string;
   name: string;
@@ -5,7 +6,7 @@ export interface Place {
   location?: { latitude: number; longitude: number };
   attributions?: { provider?: string; providerUri?: string }[];
 }
-export type CategoryKind = "FOOD" | "PURPOSE" | "UNCLASSIFIED";
+export type CategoryKind = "FOOD" | "PURPOSE" | "DISH" | "UNCLASSIFIED";
 export type EditableCategoryKind = Exclude<CategoryKind, "UNCLASSIFIED">;
 export interface Category {
   id: string;
@@ -38,7 +39,7 @@ function isCategory(value: unknown): value is Category {
     record(value) &&
     typeof value.id === "string" &&
     typeof value.name === "string" &&
-    ["FOOD", "PURPOSE", "UNCLASSIFIED"].includes(String(value.kind))
+    ["FOOD", "PURPOSE", "DISH", "UNCLASSIFIED"].includes(String(value.kind))
   );
 }
 function isPlace(value: unknown): value is Place {
@@ -96,6 +97,8 @@ export function createRegistrationApi(
       const response = await fetcher(`${origin}${path}`, {
         ...init,
         signal: controller.signal,
+        credentials: "include",
+        headers: { ...sessionHeaders(), ...init?.headers },
         cache: "no-store",
       });
       const body: unknown = await response.json().catch(() => null);
@@ -175,6 +178,8 @@ export function createRegistrationApi(
       return body;
     },
     async save(input: SaveInput): Promise<Restaurant> {
+      if (!input.categoryIds.length)
+        throw new Error("카테고리를 하나 이상 선택해주세요.");
       const body = await request("/api/restaurants", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

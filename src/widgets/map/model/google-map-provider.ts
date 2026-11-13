@@ -122,6 +122,18 @@ export class GoogleMapProvider implements IMapProvider {
     this.map?.panTo(toGoogleLatLng(center));
   }
 
+  fitPoints(points: Coordinate[]): void {
+    if (points.length < 2) return;
+    this.map?.fitBounds?.(
+      {
+        north: Math.max(...points.map((p) => p.latitude)),
+        south: Math.min(...points.map((p) => p.latitude)),
+        east: Math.max(...points.map((p) => p.longitude)),
+        west: Math.min(...points.map((p) => p.longitude)),
+      },
+      48,
+    );
+  }
   addMarker(marker: Marker): void {
     if (!this.map || !this.googleMaps) return;
 
