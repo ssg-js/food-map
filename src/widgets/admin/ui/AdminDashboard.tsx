@@ -2,6 +2,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 type Usage = {
+  mode: "mock" | "live";
+  personalUsage: { api: string; count: number; mode: string }[];
   month: string;
   day: string;
   status: string;
@@ -68,7 +70,8 @@ export function AdminDashboard() {
   const percent = limit > 0 ? Math.min(100, (used / limit) * 100) : 0;
   const states: Record<string, string> = {
     LIMITS_DISABLED: "개발 중 · 검색 한도 해제",
-    ACTIVE: "검색 한도 보호 중",
+    ACTIVE:
+      data?.mode === "mock" ? "모의 조회 한도 보호 중" : "검색 한도 보호 중",
     BLOCKED: "검색 한도 도달 · 차단 중",
     UNCONFIGURED: "이번 달 사용량 설정 필요",
     DISABLED: "검색 비활성",
@@ -89,6 +92,21 @@ export function AdminDashboard() {
         <a href="/map">서비스로 이동 ↗</a>
       </aside>
       <main className="admin-main">
+        {" "}
+        {data && (
+          <section style={{ padding: 16 }}>
+            <strong>
+              {data.mode === "mock"
+                ? "모의 API · 유료 호출 없음"
+                : "실제 API · 한도 보호"}
+            </strong>
+            {data.personalUsage?.map((row) => (
+              <p key={row.api}>
+                {row.api}: {row.count}회 ({row.mode})
+              </p>
+            ))}
+          </section>
+        )}
         <header className="admin-heading">
           <div>
             <p className="eyebrow">비용 관리</p>
@@ -106,8 +124,13 @@ export function AdminDashboard() {
             <button
               className="button button-secondary"
               onClick={async () => {
-                await fetch("/api/admin/session", { method: "DELETE" });
-                router.refresh();
+                const r = await fetch("/api/auth/logout", { method: "POST" });
+                if (!r.ok) {
+                  setError("로그아웃하지 못했어요.");
+                  return;
+                }
+                localStorage.setItem("food-map-session", String(Date.now()));
+                window.location.replace("/login");
               }}
             >
               로그아웃
