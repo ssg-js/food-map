@@ -1,3 +1,4 @@
+import {externalMode,placesFetch} from "@/shared/lib/google-places/provider";
 import { prisma } from "@/shared/lib/prisma";
 import {
   reserveSearchRequest,
@@ -15,15 +16,15 @@ export async function GET(
       { status: 400, headers },
     );
   if (
-    process.env.GOOGLE_PLACES_ENABLED !== "true" ||
-    !process.env.GOOGLE_PLACES_API_KEY
+    externalMode()==="live" && (process.env.GOOGLE_PLACES_ENABLED !== "true" ||
+    !process.env.GOOGLE_PLACES_API_KEY)
   )
     return Response.json(
       { message: "장소 정보 조회를 준비 중이에요." },
       { status: 503, headers },
     );
   try {
-    await reserveSearchRequest(
+    if(externalMode()==="live")await reserveSearchRequest(
       prisma,
       process.env.GOOGLE_SEARCH_LIMITS_DISABLED !== "true",
     );
@@ -31,12 +32,12 @@ export async function GET(
       `https://places.googleapis.com/v1/places/${encodeURIComponent(id)}`,
     );
     url.searchParams.set("languageCode", "ko");
-    const response = await fetch(url, {
+    const response = await placesFetch()(url, {
       cache: "no-store",
       redirect: "error",
       signal: AbortSignal.any([AbortSignal.timeout(10000), _request.signal]),
       headers: {
-        "X-Goog-Api-Key": process.env.GOOGLE_PLACES_API_KEY,
+        "X-Goog-Api-Key": process.env.GOOGLE_PLACES_API_KEY??"mock",
         "X-Goog-FieldMask":
           "id,displayName.text,formattedAddress,location,attributions",
       },

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { GoogleMapProvider } from "@/widgets/map/model/google-map-provider";
-export function GooglePointMap({
+function LivePointMap({
   latitude,
   longitude,
   title,
@@ -75,4 +75,9 @@ export function GooglePointMap({
       )}
     </div>
   );
+}
+
+export function GooglePointMap(props:{latitude:number;longitude:number;title:string;mode?:"mock"|"live"}){
+ if(props.mode!=="live")return <div role="region" aria-label={`${props.title} 지도`} data-map-status="ready" data-latitude={props.latitude} data-longitude={props.longitude} style={{position:"absolute",inset:0,background:"repeating-linear-gradient(35deg,#e8edf1 0px,#e8edf1 65px,white 65px,white 80px)",display:"grid",placeItems:"center"}}><div style={{background:"white",padding:20,borderRadius:16,textAlign:"center"}}><span style={{color:"#3182f6",fontSize:32}}>●</span><h3>{props.title}</h3><p>모의 지도 · 실제 지도가 아니에요</p><p>{props.latitude.toFixed(4)}, {props.longitude.toFixed(4)}</p></div></div>;
+ return <LivePointMap {...props}/>;
 }

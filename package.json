@@ -32,10 +32,12 @@
     "test:integration": "node scripts/integration-test-run.mjs"
   },
   "dependencies": {
+    "@better-auth/prisma-adapter": "^1.7.23",
     "@food-map/registration": "file:packages/registration",
     "@hookform/resolvers": "^5.4.0",
     "@prisma/client": "^6.19.3",
     "@tanstack/react-query": "^5.101.0",
+    "better-auth": "^1.7.23",
     "google-auth-library": "^11.3.3",
     "next": "16.2.9",
     "prisma": "^6.19.3",
@@ -55,6 +57,7 @@
     "eslint-config-next": "16.2.9",
     "husky": "^9.1.7",
     "lint-staged": "^17.0.7",
+    "msw": "^3.0.5",
     "prettier": "^3.8.4",
     "prettier-plugin-tailwindcss": "^0.8.0",
     "tailwindcss": "^4",
