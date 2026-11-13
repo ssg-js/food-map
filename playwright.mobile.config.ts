@@ -18,9 +18,17 @@ export default defineConfig({
       use: { ...devices["iPad Mini"], defaultBrowserType: "chromium" },
     },
   ],
-  webServer: {
-    command: "node scripts/mobile-qa-server.mjs",
-    url: "http://127.0.0.1:3200",
-    reuseExistingServer: false,
-  },
+  webServer: [
+    {
+      command: "node scripts/product-test-server.mjs",
+      url: "http://127.0.0.1:3300/login",
+      reuseExistingServer: false,
+      timeout: 120000,
+    },
+    {
+      command: "node scripts/mobile-qa-server.mjs",
+      url: "http://127.0.0.1:3200",
+      reuseExistingServer: false,
+    },
+  ],
 });

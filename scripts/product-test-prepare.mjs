@@ -27,28 +27,25 @@ if (result.status !== 0) {
 }
 const db = new PrismaClient({ datasourceUrl: url.toString() });
 try {
-  await db.category.createMany({
-    data: [
-      { id: "fixture-food", name: "파스타", kind: "FOOD" },
-      { id: "fixture-food-b", name: "한식", kind: "FOOD" },
-      { id: "fixture-purpose", name: "데이트", kind: "PURPOSE" },
-      { id: "fixture-purpose-b", name: "혼밥", kind: "PURPOSE" },
-      { id: "fixture-legacy", name: "미분류", kind: "UNCLASSIFIED" },
-    ],
-  });
-  for (const [id, categories] of [
-    ["fixture-alpha", ["fixture-food", "fixture-purpose"]],
-    ["fixture-beta", ["fixture-food-b", "fixture-purpose-b"]],
-    ["fixture-gamma", ["fixture-food", "fixture-purpose-b"]],
-  ])
-    await db.restaurant.create({
+  const { hashPassword } = await import("better-auth/crypto");
+  for (const [id, role] of [
+    ["testa", "OPERATOR"],
+    ["testb", "USER"],
+  ]) {
+    await db.user.create({
+      data: { id, name: id, username: id, email: `${id}@local.invalid`, role },
+    });
+    await db.account.create({
       data: {
-        googlePlaceId: id,
-        categories: {
-          create: categories.map((categoryId) => ({ categoryId })),
-        },
+        id: `account-${id}`,
+        userId: id,
+        accountId: id,
+        providerId: "credential",
+        password: await hashPassword("Test-password-12345"),
       },
     });
+  }
+  await db.bootstrapState.create({ data: { id: "personal", state: "DONE" } });
   const [clock] =
     await db.$queryRaw`SELECT to_char(CURRENT_TIMESTAMP AT TIME ZONE 'America/Los_Angeles','YYYY-MM') AS month`;
   await db.googleSearchBudget.create({
@@ -58,6 +55,13 @@ try {
     "/private/tmp/food-map-product-test-env.json",
     JSON.stringify({
       DATABASE_URL: url.toString(),
+      EXTERNAL_API_MODE: "mock",
+      API_DAILY_LIMIT: "80",
+      API_MONTHLY_LIMIT: "1000",
+      BETTER_AUTH_SECRET: "testauth-only-secret-01234567890123456789",
+      PERSONAL_SETUP_TOKEN: "test-setup-only-token",
+      AUTH_BASE_URL: "http://127.0.0.1:3300",
+      AUTH_TRUSTED_ORIGINS: "http://127.0.0.1:3300",
       ADMIN_ACCESS_KEY: "product-test-only-access-key-0123456789",
       GOOGLE_PLACES_ENABLED: "true",
       GOOGLE_PLACES_API_KEY: "product-test-key",

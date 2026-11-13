@@ -6,8 +6,6 @@ const env = JSON.parse(
 const child = spawn(
   process.execPath,
   [
-    "--import",
-    "./scripts/product-test-google.mjs",
     "node_modules/next/dist/bin/next",
     "start",
     "--hostname",

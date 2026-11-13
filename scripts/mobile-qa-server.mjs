@@ -1,3 +1,4 @@
+import { request as proxyRequest } from "node:http";
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -13,6 +14,32 @@ const types = {
   ".ico": "image/x-icon",
 };
 createServer(async (request, response) => {
+  if (
+    request.url.startsWith("/api/") ||
+    request.url.startsWith("/map-preview")
+  ) {
+    const headers = { ...request.headers, host: "127.0.0.1:3300" };
+    if (headers.origin) headers.origin = "http://127.0.0.1:3300";
+    const upstream = proxyRequest(
+      {
+        hostname: "127.0.0.1",
+        port: 3300,
+        path: request.url,
+        method: request.method,
+        headers,
+      },
+      (r) => {
+        response.writeHead(r.statusCode || 502, r.headers);
+        r.pipe(response);
+      },
+    );
+    upstream.on("error", () => {
+      response.writeHead(502);
+      response.end("Local test backend unavailable");
+    });
+    request.pipe(upstream);
+    return;
+  }
   try {
     const pathname = decodeURIComponent(
       new URL(request.url, "http://127.0.0.1").pathname,

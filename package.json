@@ -12,7 +12,7 @@
     "db:seed": "prisma db seed",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test tests/unit/*.test.ts",
-    "test:e2e": "playwright test",
+    "test:e2e": "npm run test:product",
     "mobile:install": "npm --prefix apps/mobile install --no-audit --no-fund && node scripts/sync-mobile-core.mjs",
     "mobile:start": "npm --prefix apps/mobile start",
     "mobile:typecheck": "npm --prefix apps/mobile run typecheck",
@@ -24,12 +24,13 @@
     "mobile:export:web": "npm --prefix apps/mobile run export:web",
     "mobile:preview": "npm --prefix apps/mobile run web",
     "mobile:qa:export": "node scripts/sync-mobile-core.mjs && node scripts/mobile-qa-export.mjs",
-    "test:mobile-ui": "playwright test --config playwright.mobile.config.ts",
+    "test:mobile-ui": "node scripts/mobile-test-run.mjs",
     "verify:web": "node scripts/verify-web.mjs",
     "verify:mobile": "node scripts/verify-mobile.mjs",
     "search:budget": "node scripts/search-budget.mjs",
     "test:product": "node scripts/product-test-run.mjs",
-    "test:integration": "node scripts/integration-test-run.mjs"
+    "test:integration": "node scripts/integration-test-run.mjs",
+    "db:migrate:local": "node scripts/migrate-local.mjs"
   },
   "dependencies": {
     "@better-auth/prisma-adapter": "^1.7.23",
