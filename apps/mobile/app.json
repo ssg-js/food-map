@@ -36,7 +36,8 @@
           "isAndroidBackgroundLocationEnabled": false
         }
       ],
-      "expo-status-bar"
+      "expo-status-bar",
+      "expo-secure-store"
     ],
     "web": {
       "bundler": "metro",

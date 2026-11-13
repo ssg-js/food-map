@@ -1,3 +1,4 @@
+import { AuthGate } from "../features/auth/AuthGate";
 import { useState } from "react";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -17,7 +18,9 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <QueryClientProvider client={client}>
         <StatusBar style="dark" />
-        <Stack screenOptions={{ headerShown: false }} />
+        <AuthGate>
+          <Stack screenOptions={{ headerShown: false }} />
+        </AuthGate>
       </QueryClientProvider>
     </SafeAreaProvider>
   );

@@ -11,7 +11,12 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Link } from "expo-router";
-import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import {
+  useQueries,
+  useQuery,
+  useQueryClient,
+  useMutation,
+} from "@tanstack/react-query";
 import type {
   Restaurant,
   Category,
@@ -126,6 +131,9 @@ export function CatalogScreen({ mode }: { mode: "saved" | "categories" }) {
     [page, setPage] = useState(1),
     [food, setFood] = useState<string[]>([]),
     [purpose, setPurpose] = useState<string[]>([]),
+    [dish, setDish] = useState<string[]>([]),
+    [q, setQ] = useState(""),
+    [submittedQ, setSubmittedQ] = useState(""),
     [place, setPlace] = useState<Place | null>(null),
     [editing, setEditing] = useState<Restaurant | null>(null),
     [category, setCategory] = useState<Category | null>(null),
@@ -140,11 +148,22 @@ export function CatalogScreen({ mode }: { mode: "saved" | "categories" }) {
     retry: false,
   });
   const list = useQuery({
-    queryKey: ["catalog", { page, food, purpose }],
-    queryFn: () => api.list({ page, food, purpose }),
+    queryKey: ["catalog", { page, food, purpose, dish, q: submittedQ }],
+    queryFn: () => api.list({ page, food, purpose, dish, q: submittedQ }),
     enabled: mode === "saved",
     retry: false,
   });
+  const places = useQueries({
+    queries: (list.data?.items || []).map((item) => ({
+      queryKey: ["place-live", item.googlePlaceId],
+      queryFn: ({ signal }: { signal: AbortSignal }) =>
+        api.details(item.googlePlaceId, signal),
+      retry: false,
+      staleTime: Infinity,
+      gcTime: 0,
+    })),
+  });
+  const mapPlaces = places.flatMap((q) => (q.data ? [q.data] : []));
   const mutation = useMutation({
     mutationFn: async () =>
       category
@@ -182,11 +201,12 @@ export function CatalogScreen({ mode }: { mode: "saved" | "categories" }) {
     setEditing(null);
     setRemove(deleting);
     setName(item.name);
-    setKind(item.kind === "PURPOSE" ? "PURPOSE" : "FOOD");
+    setKind(item.kind === "UNCLASSIFIED" ? "FOOD" : item.kind);
   }
   const groups = [
     { kind: "FOOD", title: "음식 종류" },
     { kind: "PURPOSE", title: "방문 목적" },
+    { kind: "DISH", title: "대표 메뉴" },
     { kind: "UNCLASSIFIED", title: "기존 카테고리 · 분류 전" },
   ] as const;
   return (
@@ -211,6 +231,26 @@ export function CatalogScreen({ mode }: { mode: "saved" | "categories" }) {
           {mode === "saved" ? "저장한 맛집" : "카테고리 관리"}
         </Text>
         <OperatorAccess />
+        {mode === "saved" && (
+          <View style={{ gap: 8 }}>
+            <Text>내 카테고리 이름으로 찾기</Text>
+            <TextInput
+              accessibilityLabel="내 카테고리 이름으로 찾기"
+              value={q}
+              onChangeText={setQ}
+              maxLength={100}
+              style={s.input}
+            />
+            <ActionButton
+              label="찾기"
+              onPress={() => {
+                setSubmittedQ(q.trim());
+                setPage(1);
+                setPlace(null);
+              }}
+            />
+          </View>
+        )}
         {notice ? <Feedback>{notice}</Feedback> : null}
         {categories.isError && (
           <Feedback error onRetry={() => void categories.refetch()}>
@@ -219,7 +259,11 @@ export function CatalogScreen({ mode }: { mode: "saved" | "categories" }) {
         )}
         {mode === "saved" ? (
           <>
-            <MapPreview key={place?.placeId ?? "empty"} place={place} />
+            <MapPreview
+              place={place ?? mapPlaces[0]}
+              points={mapPlaces}
+              onSelect={setPlace}
+            />
             <View style={s.card}>
               {groups
                 .filter((g) => g.kind !== "UNCLASSIFIED")
@@ -235,11 +279,17 @@ export function CatalogScreen({ mode }: { mode: "saved" | "categories" }) {
                             label={c.name}
                             checked={(g.kind === "FOOD"
                               ? food
-                              : purpose
+                              : g.kind === "DISH"
+                                ? dish
+                                : purpose
                             ).includes(c.id)}
                             onPress={() => {
                               const update =
-                                g.kind === "FOOD" ? setFood : setPurpose;
+                                g.kind === "FOOD"
+                                  ? setFood
+                                  : g.kind === "DISH"
+                                    ? setDish
+                                    : setPurpose;
                               update((v) =>
                                 v.includes(c.id)
                                   ? v.filter((x) => x !== c.id)
@@ -258,6 +308,10 @@ export function CatalogScreen({ mode }: { mode: "saved" | "categories" }) {
                 onPress={() => {
                   setFood([]);
                   setPurpose([]);
+                  setDish([]);
+                  setQ("");
+                  setSubmittedQ("");
+                  setPlace(null);
                   setPage(1);
                 }}
               />
@@ -363,7 +417,7 @@ export function CatalogScreen({ mode }: { mode: "saved" | "categories" }) {
               <Text style={s.muted}>
                 {category
                   ? `이 카테고리와 맛집 ${category._count?.restaurants ?? 0}곳의 연결이 해제됩니다. 맛집은 남아 있어요.`
-                  : "공용 목록의 맛집과 분류 연결이 삭제됩니다."}
+                  : "내 목록의 맛집과 분류 연결이 삭제됩니다."}
               </Text>
             ) : category ? (
               <>
@@ -384,6 +438,11 @@ export function CatalogScreen({ mode }: { mode: "saved" | "categories" }) {
                     label="방문 목적"
                     checked={kind === "PURPOSE"}
                     onPress={() => setKind("PURPOSE")}
+                  />
+                  <Chip
+                    label="대표 메뉴"
+                    checked={kind === "DISH"}
+                    onPress={() => setKind("DISH")}
                   />
                 </View>
               </>

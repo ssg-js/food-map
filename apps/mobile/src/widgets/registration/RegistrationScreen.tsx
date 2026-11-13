@@ -1,3 +1,4 @@
+import { OperatorAccess } from "../../features/catalog/OperatorAccess";
 import { Link } from "expo-router";
 import { useRef, type ComponentRef } from "react";
 import {
@@ -70,6 +71,7 @@ function CategoryGroups({ flow }: { flow: RegistrationController }) {
   const groups = [
     { kind: "FOOD", title: "음식 종류" },
     { kind: "PURPOSE", title: "방문 목적" },
+    { kind: "DISH", title: "대표 메뉴" },
     { kind: "UNCLASSIFIED", title: "기존 카테고리 · 분류 전" },
   ] as const;
   return (
@@ -255,6 +257,26 @@ export function RegistrationScreen() {
                 ),
               )}
             </View>
+            <OperatorAccess />
+            <Text style={s.fieldLabel}>음식 종류로 찾기</Text>
+            <TextInput
+              accessibilityLabel="음식 종류로 찾기"
+              style={s.input}
+              value={flow.foodQuery}
+              onChangeText={flow.setFoodQuery}
+              placeholder="예: 한식, 이탈리안"
+              maxLength={80}
+            />
+            <Text style={s.fieldLabel}>대표 메뉴로 찾기</Text>
+            <TextInput
+              accessibilityLabel="대표 메뉴로 찾기"
+              style={s.input}
+              value={flow.dishQuery}
+              onChangeText={flow.setDishQuery}
+              placeholder="예: 돈카츠, 냉면"
+              maxLength={80}
+            />
+            <Text style={s.help}>검색할 내용: {flow.composedQuery}</Text>
             <Text style={s.fieldLabel}>장소 검색</Text>
             <View style={s.inputRow}>
               <TextInput
@@ -418,7 +440,7 @@ export function RegistrationScreen() {
               </View>
             )}
             <Text style={s.footer}>
-              등록한 맛집의 지도 표시는 준비 중이에요.
+              저장 목록에서 카테고리로 맛집을 찾아보세요.
             </Text>
           </View>
         </ScrollView>

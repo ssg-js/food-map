@@ -10,7 +10,15 @@ import { WebView } from "react-native-webview";
 import type { Place } from "@food-map/registration";
 import { apiBaseUrl } from "../../shared/api";
 import { useCurrentLocation } from "../../features/location/useCurrentLocation";
-export function MapPreview({ place }: { place?: Place | null }) {
+export function MapPreview({
+  place,
+  points,
+  onSelect,
+}: {
+  place?: Place | null;
+  points?: Place[];
+  onSelect?: (p: Place) => void;
+}) {
   const [position, setPosition] = useState<{
       latitude: number;
       longitude: number;
@@ -25,13 +33,62 @@ export function MapPreview({ place }: { place?: Place | null }) {
     q.set("lat", String(place.location.latitude));
     q.set("lng", String(place.location.longitude));
   }
+  if (!position && points?.length)
+    q.set(
+      "points",
+      JSON.stringify(
+        points.flatMap((p) =>
+          p.location ? [{ id: p.placeId, ...p.location }] : [],
+        ),
+      ),
+    );
   const uri = `${apiBaseUrl}/map-preview?${q}`;
   return (
     <View style={s.map}>
+      {points?.length ? (
+        <View
+          style={{
+            position: "absolute",
+            top: 4,
+            left: 4,
+            right: 4,
+            zIndex: 10,
+            flexDirection: "row",
+            flexWrap: "wrap",
+            gap: 4,
+          }}
+        >
+          {points.map((p, i) => (
+            <Text
+              key={p.placeId}
+              accessibilityRole="button"
+              onPress={() => onSelect?.(p)}
+              style={{
+                backgroundColor:
+                  p.placeId === place?.placeId ? "#d0e6ff" : "white",
+                padding: 8,
+                borderRadius: 12,
+              }}
+            >
+              {i + 1}. {p.name}
+            </Text>
+          ))}
+        </View>
+      ) : null}
       {place?.location || position ? (
         <WebView
           key={uri}
           source={{ uri }}
+          onMessage={(e) => {
+            try {
+              const b = JSON.parse(e.nativeEvent.data);
+              const p = points?.find((p) => p.placeId === b.id);
+              if (b.type === "place-selected" && p) {
+                setPosition(null);
+                onSelect?.(p);
+              }
+            } catch {}
+          }}
           style={s.web}
           originWhitelist={[new URL(apiBaseUrl).origin]}
           onError={() =>
