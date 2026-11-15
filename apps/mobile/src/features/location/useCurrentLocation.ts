@@ -1,14 +1,16 @@
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import * as Location from "expo-location";
 export function useCurrentLocation() {
   const [locating, setLocating] = useState(false);
   const [permission, setPermission] = useState(false);
   const [message, setMessage] = useState("");
-  async function requestPosition(): Promise<{
+  const busy = useRef(false);
+  const requestPosition = useCallback(async (): Promise<{
     latitude: number;
     longitude: number;
-  } | null> {
-    if (locating) return null;
+  } | null> => {
+    if (busy.current) return null;
+    busy.current = true;
     setLocating(true);
     setMessage("");
     let timeout: ReturnType<typeof setTimeout> | undefined;
@@ -38,9 +40,10 @@ export function useCurrentLocation() {
       setMessage("현재 위치를 확인하지 못했어요. 기본 지도를 표시해요.");
       return null;
     } finally {
+      busy.current = false;
       clearTimeout(timeout);
       setLocating(false);
     }
-  }
+  }, []);
   return { locating, permission, message, requestPosition };
 }

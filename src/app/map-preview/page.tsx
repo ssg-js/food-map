@@ -52,6 +52,7 @@ export default async function MapPreviewPage({
     <main style={{ position: "fixed", inset: 0, background: "#f2f4f6" }}>
       <MapPreviewFrame
         initial={{ latitude, longitude }}
+        view={params.view}
         points={points}
         mode={process.env.EXTERNAL_API_MODE === "live" ? "live" : "mock"}
       />

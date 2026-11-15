@@ -1,11 +1,14 @@
 import { test, expect } from "@playwright/test";
 test("Expo UI authenticates and saves through real personal API", async ({
   page,
+  context,
 }, info) => {
   const external: string[] = [];
   page.on("request", (r) => {
     if (/googleapis|gstatic/.test(r.url())) external.push(r.url());
   });
+  await context.grantPermissions(["geolocation"]);
+  await context.setGeolocation({ latitude: 35.1796, longitude: 129.0756 });
   await page.goto("/");
   await page
     .getByRole("textbox", { name: "아이디", exact: true })
@@ -17,6 +20,11 @@ test("Expo UI authenticates and saves through real personal API", async ({
   await expect(
     page.getByText("맛집 등록", { exact: true }).first(),
   ).toBeVisible();
+  await expect(
+    page
+      .frameLocator("iframe")
+      .getByRole("region", { name: "현재 위치 지도", exact: true }),
+  ).toHaveAttribute("data-latitude", "35.1796");
   await page
     .getByRole("textbox", { name: "대표 메뉴로 찾기", exact: true })
     .fill("돈카츠");

@@ -1,4 +1,5 @@
-import { useEffect, useRef } from "react";
+import { useCurrentLocation } from "../../features/location/useCurrentLocation";
+import { useEffect, useRef, useState } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import type { Place } from "@food-map/registration";
 import { apiBaseUrl } from "../../shared/api";
@@ -12,6 +13,13 @@ export function MapPreview({
   onSelect?: (p: Place) => void;
 }) {
   const frame = useRef<HTMLIFrameElement>(null);
+  const [position, setPosition] = useState<{
+    latitude: number;
+    longitude: number;
+    forPlaceId?: string;
+  } | null>(null);
+  const { requestPosition, locating, message } = useCurrentLocation();
+
   useEffect(() => {
     const handle = (e: MessageEvent) => {
       if (
@@ -25,8 +33,67 @@ export function MapPreview({
     window.addEventListener("message", handle);
     return () => window.removeEventListener("message", handle);
   }, [points, onSelect]);
+  const started = useRef(false);
+  useEffect(() => {
+    let active = true;
+    const timer = setTimeout(() => {
+      if (started.current) return;
+      started.current = true;
+      void requestPosition().then((p) => {
+        if (active && p) setPosition({ ...p, forPlaceId: place?.placeId });
+      });
+    }, 0);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [requestPosition, place]);
+  const currentPosition =
+    position?.forPlaceId === place?.placeId ? position : null;
+  const center = currentPosition ??
+    place?.location ?? { latitude: 37.5665, longitude: 126.978 };
+  const view = currentPosition
+    ? "current"
+    : place?.location
+      ? "selected"
+      : "fallback";
+
   return (
     <View style={s.map}>
+      {message ? (
+        <Text
+          accessibilityRole="alert"
+          style={{
+            position: "absolute",
+            top: 4,
+            left: 4,
+            zIndex: 20,
+            backgroundColor: "white",
+            padding: 8,
+          }}
+        >
+          {message}
+        </Text>
+      ) : null}
+      <Text
+        accessibilityRole="button"
+        onPress={() => {
+          void requestPosition().then((p) => {
+            if (p) setPosition({ ...p, forPlaceId: place?.placeId });
+          });
+        }}
+        style={{
+          position: "absolute",
+          bottom: 8,
+          right: 8,
+          zIndex: 20,
+          backgroundColor: "white",
+          padding: 12,
+        }}
+      >
+        {locating ? "위치 확인 중" : "현재 위치 표시"}
+      </Text>
+
       {points?.length ? (
         <View
           style={{
@@ -57,19 +124,14 @@ export function MapPreview({
           ))}
         </View>
       ) : null}
-      {place?.location ? (
+      {
         <iframe
           ref={frame}
-          title={`${place.name} 위치`}
-          src={`${apiBaseUrl}/map-preview?${new URLSearchParams({ lat: String(place.location?.latitude ?? ""), lng: String(place.location?.longitude ?? ""), points: JSON.stringify(points?.flatMap((p) => (p.location ? [{ id: p.placeId, ...p.location }] : [])) || []) })}`}
+          title={`${currentPosition ? "현재 위치" : place?.name || "기본 지도"} 위치`}
+          src={`${apiBaseUrl}/map-preview?${new URLSearchParams({ lat: String(center.latitude), lng: String(center.longitude), view, points: JSON.stringify((currentPosition ? [] : points)?.flatMap((p) => (p.location ? [{ id: p.placeId, ...p.location }] : [])) || []) })}`}
           style={{ width: "100%", height: 260, border: 0 }}
         />
-      ) : (
-        <View style={s.empty}>
-          <Text style={s.title}>지도 미리보기</Text>
-          <Text>장소를 선택하면 Google 지도에 핀이 표시돼요.</Text>
-        </View>
-      )}
+      }
     </View>
   );
 }

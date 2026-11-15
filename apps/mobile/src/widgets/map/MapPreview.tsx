@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -22,18 +22,39 @@ export function MapPreview({
   const [position, setPosition] = useState<{
       latitude: number;
       longitude: number;
+      forPlaceId?: string;
     } | null>(null),
     [error, setError] = useState("");
   const { requestPosition, locating, message } = useCurrentLocation();
+  const started = useRef(false);
+  useEffect(() => {
+    let active = true;
+    const timer = setTimeout(() => {
+      if (started.current) return;
+      started.current = true;
+      void requestPosition().then((p) => {
+        if (active && p) setPosition({ ...p, forPlaceId: place?.placeId });
+      });
+    }, 0);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [requestPosition, place]);
+  const currentPosition =
+    position?.forPlaceId === place?.placeId ? position : null;
+  const center = currentPosition ??
+    place?.location ?? { latitude: 37.5665, longitude: 126.978 };
+  const view = currentPosition
+    ? "current"
+    : place?.location
+      ? "selected"
+      : "fallback";
   const q = new URLSearchParams();
-  if (position) {
-    q.set("lat", String(position.latitude));
-    q.set("lng", String(position.longitude));
-  } else if (place?.location) {
-    q.set("lat", String(place.location.latitude));
-    q.set("lng", String(place.location.longitude));
-  }
-  if (!position && points?.length)
+  q.set("lat", String(center.latitude));
+  q.set("lng", String(center.longitude));
+  q.set("view", view);
+  if (!currentPosition && points?.length)
     q.set(
       "points",
       JSON.stringify(
@@ -75,7 +96,7 @@ export function MapPreview({
           ))}
         </View>
       ) : null}
-      {place?.location || position ? (
+      {
         <WebView
           key={uri}
           source={{ uri }}
@@ -99,12 +120,7 @@ export function MapPreview({
           startInLoadingState
           renderLoading={() => <ActivityIndicator style={s.loading} />}
         />
-      ) : (
-        <View style={s.empty}>
-          <Text style={s.heading}>지도에서 맛집을 확인해요</Text>
-          <Text>검색 결과나 저장한 장소를 선택해주세요.</Text>
-        </View>
-      )}
+      }
       {error || message ? (
         <Text accessibilityRole="alert" style={s.message}>
           {error || message}
@@ -118,7 +134,7 @@ export function MapPreview({
         onPress={() => {
           void requestPosition().then((p) => {
             if (p) {
-              setPosition(p);
+              setPosition({ ...p, forPlaceId: place?.placeId });
               setError("");
             }
           });

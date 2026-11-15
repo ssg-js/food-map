@@ -15,7 +15,7 @@
 - 검색/저장 목록 선택 장소의 일시 좌표로 핀 표시, 선택 변경 시 지도 이동.
 - 웹 화면은 GooglePointMap의 panTo/updateMarker를 사용한다.
 - 앱은 Expo SDK58 호환 react-native-webview 14.0.1로 내부 지도 표시.
-- 현재 위치 권한은 사용자가 버튼을 눌렀을 때만 요청한다.
+- 지도 진입 시 현재 위치 권한을 자동 요청한다. 실패 시 기본 지도·안내를 표시하고 버튼으로 재시도한다.
 - Google 지도 인증 오류·네트워크 오류 안내 및 외부 Google 지도 열기 제공.
 - 지도 키는 공개 웹 키만 사용하고 서버 Places 키는 앱에 넣지 않는다.
 - 실제 휴대폰은 EXPO_PUBLIC_API_URL을 이 컴퓨터의 LAN 주소로 설정한다. 같은 주소를 Google 키의 HTTP referrer 허용 목록에도 추가해야 한다.

@@ -12,6 +12,7 @@ type PointProps = {
   longitude: number;
   title: string;
   mode?: "mock" | "live";
+  showMarker?: boolean;
   points?: MapPoint[];
   onSelect?: (id: string) => void;
 };
@@ -21,6 +22,7 @@ function LivePointMap({
   title,
   points,
   onSelect,
+  showMarker = true,
 }: PointProps) {
   const container = useRef<HTMLDivElement>(null),
     provider = useRef<GoogleMapProvider | null>(null),
@@ -70,13 +72,13 @@ function LivePointMap({
         coordinate: { latitude: point.latitude, longitude: point.longitude },
         title: point.title,
       });
-    if (!points?.length)
+    if (!points?.length && showMarker)
       map.updateMarker({ id: "selected-place", coordinate, title });
-    else
+    else if (points?.length)
       map.fitPoints(
         points.map((p) => ({ latitude: p.latitude, longitude: p.longitude })),
       );
-  }, [ready, latitude, longitude, title, points]);
+  }, [ready, latitude, longitude, title, points, showMarker]);
   useEffect(() => {
     const map = provider.current;
     if (!ready || !map) return;
@@ -134,7 +136,9 @@ export function GooglePointMap(props: PointProps) {
             textAlign: "center",
           }}
         >
-          <span style={{ color: "#3182f6", fontSize: 32 }}>●</span>
+          {props.showMarker !== false && (
+            <span style={{ color: "#3182f6", fontSize: 32 }}>●</span>
+          )}
           <h3>{props.title}</h3>
           <div
             aria-label="지도 핀"

@@ -1,7 +1,7 @@
 "use client";
 import type { Place } from "@food-map/registration";
 import { GooglePointMap } from "./GooglePointMap";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 export function SelectedPlaceMap({
   apiKey,
   selectedPlace,
@@ -27,12 +27,17 @@ export function SelectedPlaceMap({
     latitude: number;
     longitude: number;
   } | null>(null);
-  const [locating, setLocating] = useState(false);
+  const requestVersion = useRef(0);
+  const placeChosen = useRef(false);
+  const [locating, setLocating] = useState(true);
   const [message, setMessage] = useState("");
   useEffect(() => {
     const select = (event: Event) => {
       const p = (event as CustomEvent).detail;
       if (p && typeof p.placeId === "string" && typeof p.name === "string") {
+        placeChosen.current = true;
+        requestVersion.current++;
+        setLocating(false);
         setPlace(p);
         setPosition(null);
         setMessage("");
@@ -41,15 +46,21 @@ export function SelectedPlaceMap({
     window.addEventListener("food-map-place", select);
     return () => window.removeEventListener("food-map-place", select);
   }, []);
-  function locate() {
+  const locate = useCallback(() => {
+    const version = ++requestVersion.current;
+    placeChosen.current = false;
+    setLocating(true);
+    setMessage("현재 위치를 확인하고 있어요.");
     if (!navigator.geolocation) {
-      setMessage("이 브라우저에서 위치 정보를 사용할 수 없어요.");
+      setLocating(false);
+      setMessage(
+        "이 브라우저에서 위치 정보를 사용할 수 없어 기본 지도를 표시해요.",
+      );
       return;
     }
-    setLocating(true);
-    setMessage("");
     navigator.geolocation.getCurrentPosition(
       (p) => {
+        if (requestVersion.current !== version) return;
         setPosition({
           latitude: p.coords.latitude,
           longitude: p.coords.longitude,
@@ -61,22 +72,38 @@ export function SelectedPlaceMap({
         );
       },
       (e) => {
+        if (requestVersion.current !== version) return;
         setLocating(false);
         setMessage(
           e.code === 1
-            ? "위치 권한이 꺼져 있어요. 브라우저 설정에서 위치를 허용해주세요."
-            : "현재 위치를 확인하지 못했어요. 다시 시도해주세요.",
+            ? "위치 권한이 꺼져 있어 기본 지도를 표시해요. 브라우저 설정에서 위치를 허용해주세요."
+            : "현재 위치를 확인하지 못해 기본 지도를 표시해요. 다시 시도해주세요.",
         );
       },
       { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 },
     );
-  }
+  }, []);
+  const invalidateLocation = useCallback(() => {
+    requestVersion.current++;
+  }, []);
+  useEffect(() => {
+    // Cancel Strict Mode's first scheduled request and ignore callbacks after unmount.
+    const timer = setTimeout(() => {
+      if (!placeChosen.current) locate();
+    }, 0);
+    return () => {
+      clearTimeout(timer);
+      invalidateLocation();
+    };
+  }, [locate, invalidateLocation]);
+  const center = position ??
+    place?.location ?? { latitude: 37.5665, longitude: 126.978 };
   const q = position
     ? `${position.latitude},${position.longitude}`
     : place
       ? `place_id:${place.placeId}`
       : null;
-  const name = position ? "현재 위치" : place?.name;
+  const name = position ? "현재 위치" : (place?.name ?? "기본 지도 · 서울시청");
   return (
     <div
       style={{
@@ -86,21 +113,26 @@ export function SelectedPlaceMap({
         background: "#f2f4f6",
       }}
     >
-      {(position || place?.location) && (mode === "mock" || apiKey) ? (
+      {mode === "mock" || apiKey ? (
         <GooglePointMap
           mode={mode}
+          showMarker={!!(position || place?.location)}
           points={(position ? [] : points)?.flatMap((p) =>
             p.location ? [{ id: p.placeId, title: p.name, ...p.location }] : [],
           )}
           onSelect={(id) => {
             const p = points?.find((p) => p.placeId === id);
             if (p) {
+              placeChosen.current = true;
+              requestVersion.current++;
+              setLocating(false);
+              setMessage("");
               setPosition(null);
               onSelect?.(p);
             }
           }}
-          latitude={(position ?? place!.location!).latitude}
-          longitude={(position ?? place!.location!).longitude}
+          latitude={center.latitude}
+          longitude={center.longitude}
           title={name ?? "선택 장소"}
         />
       ) : (
@@ -139,7 +171,7 @@ export function SelectedPlaceMap({
       )}
       {q && (
         <a
-          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(position ? q : place!.name)}${place ? `&query_place_id=${encodeURIComponent(place.placeId)}` : ""}`}
+          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(position ? q : place!.name)}${!position && place ? `&query_place_id=${encodeURIComponent(place.placeId)}` : ""}`}
           target="_blank"
           rel="noopener noreferrer"
           style={{
