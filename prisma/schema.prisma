@@ -87,6 +87,7 @@ model GoogleMonitoringSnapshot {
 }
 
 model User {
+  recoveryKey     RecoveryKey?
   id              String       @id
   name            String
   email           String       @unique
@@ -166,4 +167,11 @@ model ApiUsage {
   count  Int    @default(0)
 
   @@index([mode, scope, period])
+}
+
+model RecoveryKey {
+  userId    String   @id
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  keyHash   String   @unique
+  createdAt DateTime @default(now())
 }

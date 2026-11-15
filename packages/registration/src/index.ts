@@ -6,3 +6,5 @@ export * from "./catalog-api";
 export * from "./mock-places";
 
 export { setSessionToken, sessionHeaders } from "./session";
+
+export { createAccountApi } from "./account-api";

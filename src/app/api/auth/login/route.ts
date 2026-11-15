@@ -42,6 +42,14 @@ export async function POST(request: Request) {
       { message: "시도가 너무 많아요. 15분 뒤 다시 시도해주세요." },
       { status: 429, headers: privateHeaders },
     );
+  // An in-flight sign-in using the old password must not survive a password reset.
+  const credentialBefore = await prisma.account.findFirst({
+    where: {
+      providerId: "credential",
+      user: { username: body.data.username.toLowerCase() },
+    },
+    select: { id: true, password: true },
+  });
   const response = await auth.api.signInUsername({
     body: body.data,
     headers: request.headers,
@@ -53,11 +61,29 @@ export async function POST(request: Request) {
       { message: "아이디와 비밀번호를 확인해주세요." },
       { status: 401, headers: privateHeaders },
     );
+  const token = response.headers.get("set-auth-token") || result.token;
+  const credentialAfter = credentialBefore
+    ? await prisma.account.findUnique({
+        where: { id: credentialBefore.id },
+        select: { password: true },
+      })
+    : null;
+  if (
+    !credentialBefore ||
+    !credentialAfter ||
+    credentialBefore.password !== credentialAfter.password
+  ) {
+    if (typeof token === "string")
+      await prisma.session.deleteMany({ where: { token } });
+    return Response.json(
+      { message: "계정 정보가 변경됐어요. 새 비밀번호로 다시 로그인해주세요." },
+      { status: 401, headers: privateHeaders },
+    );
+  }
   await prisma.loginAttempt.deleteMany({ where: { id } });
   const h = new Headers(privateHeaders);
   for (const cookie of response.headers.getSetCookie())
     h.append("set-cookie", cookie);
-  const token = response.headers.get("set-auth-token") || result.token;
   return Response.json(
     request.headers.get("x-food-map-client") === "native"
       ? { ok: true, token }

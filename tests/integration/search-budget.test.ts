@@ -18,7 +18,7 @@ test(
     const db = new PrismaClient({ datasourceUrl: url });
     const qualified = (sql: string) =>
       sql.replace(
-        /"(RestaurantCategory|Restaurant|Category|GoogleSearchBudget|GoogleSearchDailyUsage|GoogleMonitoringSnapshot|CategoryKind|User|Session|Account|Verification|BootstrapState|LoginAttempt|ApiUsage)"/g,
+        /"(RestaurantCategory|Restaurant|Category|GoogleSearchBudget|GoogleSearchDailyUsage|GoogleMonitoringSnapshot|CategoryKind|User|Session|Account|Verification|BootstrapState|LoginAttempt|ApiUsage|RecoveryKey)"/g,
         `"${schema}"."$1"`,
       );
     try {
@@ -71,6 +71,19 @@ test(
         .split(";")
         .filter((s) => s.replace(/^--.*$/gm, "").trim()))
         await db.$executeRawUnsafe(qualified(statement));
+      const recoverySql = await readFile(
+        "prisma/migrations/20261116000000_account_recovery/migration.sql",
+        "utf8",
+      );
+      for (const statement of recoverySql.split(";").filter((s) => s.trim()))
+        await db.$executeRawUnsafe(qualified(statement));
+      await db.recoveryKey.create({
+        data: {
+          userId: "__legacy_quarantine__",
+          keyHash: "migration-test-hash",
+        },
+      });
+      assert.equal(await db.recoveryKey.count(), 1);
       assert.equal(
         (await db.restaurant.findUniqueOrThrow({ where: { id: "r" } })).ownerId,
         "__legacy_quarantine__",
