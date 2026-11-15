@@ -18,6 +18,7 @@ export function OperatorAccess() {
       {q.data?.user?.role === "OPERATOR" && (
         <a href="/admin/api-usage">API 사용량</a>
       )}
+      <a href="/account/security">계정 보안·비밀번호 변경</a>
       <button
         className="text-button"
         onClick={async () => {

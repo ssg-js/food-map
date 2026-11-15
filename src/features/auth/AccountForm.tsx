@@ -80,6 +80,7 @@ export function AccountForm({ setup = false }: { setup?: boolean }) {
         <button className="button button-primary" disabled={busy}>
           {busy ? "처리 중…" : setup ? "계정 만들기" : "로그인"}
         </button>
+        {!setup && <a href="/recover">아이디·비밀번호 찾기</a>}
         <p>내가 저장한 맛집과 카테고리를 안전하게 보관해요.</p>
       </form>
     </main>
