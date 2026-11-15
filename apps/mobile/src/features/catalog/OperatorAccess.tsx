@@ -1,3 +1,4 @@
+import { router } from "expo-router";
 import { View, Text } from "react-native";
 import { useState } from "react";
 import { usePersonalAuth } from "../auth/AuthGate";
@@ -8,6 +9,11 @@ export function OperatorAccess() {
   return (
     <View style={{ padding: 16, gap: 12 }}>
       <Text>내 계정의 맛집과 카테고리예요.</Text>
+      <ActionButton
+        secondary
+        label="계정 보안·비밀번호 변경"
+        onPress={() => router.push("/account-security")}
+      />
       <ActionButton
         secondary
         label="로그아웃"

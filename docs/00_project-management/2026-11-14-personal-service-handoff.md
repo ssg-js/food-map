@@ -63,3 +63,6 @@ Local Prisma dev 엔진의 search_path 문제로 표준 migrate deploy 첫 시�
 기능별 연속 브랜치: personal-01-msw-contracts → personal-02-auth-ownership → personal-03-web-search-map → personal-04-expo-account → personal-05-usage-dashboard → personal-06-product-verification. 각 브랜치가 직전 브랜치를 포함한다. 최종 결과는 마지막 브랜치에서 확인한다. 커밋 목록으로 변경 범위를 확인할 수 있다. main은 병합하지 않는다.
 
 커밋: `8164037` MSW 기본 모드 → `33cd486` 계정·소유권 → `6e6c94f` 웹 검색·지도 → `611ac8b` Expo 계정 → `dcd6d25` 운영자 사용량. 마지막 검증 커밋은 Git 로그에서 확인한다.
+
+## 2026-11-16 후속 계정 보안
+사용자 추가 요청으로 아이디 찾기·비밀번호 재설정·비밀번호 변경을 구현했다. 이전에 범위 밖으로 제외했던 복구 기능에 대한 새 승인에 따른 작업이다. 이메일 대신 별도 복구 키를 사용하며 `/account/security`에서 현재 비밀번호로 발급한다. 실제 사용자 비밀번호를 임의 변경하지 않았다. 상세는 `docs/features/account-recovery-security.md`와 `feature/account-recovery-security` 브랜치 참고.

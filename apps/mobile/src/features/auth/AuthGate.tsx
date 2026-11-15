@@ -1,3 +1,4 @@
+import { AccountTools } from "./AccountTools";
 import {
   createContext,
   useContext,
@@ -18,7 +19,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { setSessionToken } from "@food-map/registration";
 import { catalogApi as api } from "../catalog/api";
 import { ActionButton, Feedback } from "../../shared/ui";
-const Context = createContext({ logout: async () => {} });
+const Context = createContext({
+  logout: async () => {},
+  clearSession: async () => {},
+});
 export const usePersonalAuth = () => useContext(Context);
 // Web preview uses session memory only; native persists in encrypted platform storage.
 const readToken = () =>
@@ -34,6 +38,7 @@ const storeToken = (token: string) =>
 export function AuthGate({ children }: { children: ReactNode }) {
   const c = useQueryClient(),
     [ready, setReady] = useState(false),
+    [recover, setRecover] = useState(false),
     [user, setUser] = useState<{ id: string; username: string } | null>(null),
     [username, setUsername] = useState(""),
     [password, setPassword] = useState(""),
@@ -83,6 +88,8 @@ export function AuthGate({ children }: { children: ReactNode }) {
         <Text>계정을 확인하고 있어요.</Text>
       </View>
     );
+  if (!user && recover)
+    return <AccountTools recover onClose={() => setRecover(false)} />;
   if (!user)
     return (
       <ScrollView
@@ -155,6 +162,14 @@ export function AuthGate({ children }: { children: ReactNode }) {
                 .finally(() => setBusy(false));
             }}
           />
+          <ActionButton
+            secondary
+            label="아이디·비밀번호 찾기"
+            onPress={() => {
+              setPassword("");
+              setRecover(true);
+            }}
+          />
           <Text>최초 계정은 웹 /setup에서 생성해주세요.</Text>
         </View>
       </ScrollView>
@@ -162,6 +177,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   return (
     <Context.Provider
       value={{
+        clearSession: clear,
         logout: async () => {
           await api.logout();
           await clear();
