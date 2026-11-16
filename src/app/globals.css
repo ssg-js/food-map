@@ -1645,3 +1645,6 @@ button:disabled[aria-pressed="true"] {
 @media(prefers-reduced-motion:reduce){.search-map-pin{transition:none}}
 
 @media(max-width:700px){.mock-map-zoom{top:auto;bottom:70px;right:8px}.food-map-app .map-pane>.button{bottom:12px!important}}
+
+/* Current location remains a small fixed dot, independent of restaurant highlights. */
+.mock-location-dot { transform: translate(-50%, -50%); }

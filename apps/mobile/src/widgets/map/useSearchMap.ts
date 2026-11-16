@@ -11,11 +11,13 @@ export function useSearchMap(flow: RegistrationController) {
       longitude: 126.978,
     }),
     [located, setLocated] = useState(false);
+  const [centerRevision, setCenterRevision] = useState(0);
   const { requestPosition, locating, message } = useCurrentLocation();
   const locate = useCallback(async () => {
     const p = await requestPosition();
     if (p) {
       setCenter(p);
+      setCenterRevision((revision) => revision + 1);
       setLocated(true);
     }
   }, [requestPosition]);
@@ -29,13 +31,22 @@ export function useSearchMap(flow: RegistrationController) {
     () => ({
       type: "map-state",
       center,
+      centerRevision,
+      userLocation: located ? center : undefined,
       title:
         flow.selectedPlace?.name ||
         (located ? "현재 위치" : "기본 지도 · 서울시청"),
       points: flow.search.data || [],
       activeId: flow.hoveredId ?? flow.selectedPlace?.placeId ?? null,
     }),
-    [center, located, flow.selectedPlace, flow.search.data, flow.hoveredId],
+    [
+      center,
+      centerRevision,
+      located,
+      flow.selectedPlace,
+      flow.search.data,
+      flow.hoveredId,
+    ],
   );
   const receive = useCallback(
     (event: SearchMapEvent) => {

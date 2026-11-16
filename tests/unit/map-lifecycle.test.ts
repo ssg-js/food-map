@@ -166,13 +166,28 @@ test("marker highlighting changes size and z-order without moving camera or recr
       id: "b",
       coordinate: { latitude: 37.1, longitude: 127.1 },
     });
+    provider.addMarker({
+      id: "gps",
+      kind: "user-location",
+      coordinate: { latitude: 37, longitude: 127 },
+    });
+    provider.addMarker({
+      id: "halo",
+      kind: "user-location-halo",
+      coordinate: { latitude: 37, longitude: 127 },
+    });
     provider.highlightMarker("a");
     assert.equal(markers[0].icon?.scale, 10.8);
     assert.equal(markers[1].icon?.scale, 9);
     assert.ok(markers[0].z > markers[1].z);
     provider.highlightMarker(null);
     assert.equal(markers[0].icon?.scale, 9);
-    assert.equal(created, 2);
+    assert.equal(markers[2].icon?.scale, 7);
+    assert.ok(markers[2].z > markers[0].z);
+    provider.highlightMarker("gps");
+    assert.equal(markers[2].icon?.scale, 7);
+    assert.equal(markers[3].icon?.scale, 17);
+    assert.equal(created, 4);
     assert.equal(cameraMoves, 0);
   } finally {
     provider.destroy();

@@ -102,7 +102,7 @@ test("Expo viewport search keeps map mounted and links list highlight to markers
   context,
 }, info) => {
   await context.grantPermissions(["geolocation"]);
-  await context.setGeolocation({ latitude: 35.1796, longitude: 129.0756 });
+  await context.setGeolocation({ latitude: 37.5455, longitude: 127.0543 });
   await page.goto("/");
   await page
     .getByRole("textbox", { name: "아이디", exact: true })
@@ -114,7 +114,7 @@ test("Expo viewport search keeps map mounted and links list highlight to markers
   const frame = page.frameLocator("iframe");
   await expect(
     frame.getByRole("region", { name: "현재 위치 지도", exact: true }),
-  ).toHaveAttribute("data-latitude", "35.1796");
+  ).toHaveAttribute("data-latitude", "37.5455");
   let navigations = 0;
   page.on("framenavigated", (f) => {
     if (f !== page.mainFrame()) navigations++;
@@ -131,6 +131,7 @@ test("Expo viewport search keeps map mounted and links list highlight to markers
     exact: true,
   });
   await expect(pin).toBeVisible();
+  await expect(frame.getByTestId("current-location-marker")).toBeVisible();
   await expect(
     frame.getByRole("button", { name: "모의 파스타 성수점 핀", exact: true }),
   ).toBeVisible();
@@ -153,6 +154,11 @@ test("Expo viewport search keeps map mounted and links list highlight to markers
   await expect(
     page.getByRole("button", { name: /^모의 평양냉면 강남점,/ }),
   ).toBeVisible();
+  await expect(frame.getByTestId("current-location-marker")).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "현재 위치 표시", exact: true })
+    .click();
+  await expect(frame.getByTestId("current-location-marker")).toBeVisible();
   expect(navigations).toBe(0);
   expect(
     await page.evaluate(() => ({

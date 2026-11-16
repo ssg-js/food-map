@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { MockPointMap } from "./MockPointMap";
-import type { MapViewport } from "@food-map/registration";
+import type { Marker } from "@/widgets/map/model/marker";
+import type { MapCoordinate, MapViewport } from "@food-map/registration";
 import { GoogleMapProvider } from "@/widgets/map/model/google-map-provider";
 export type MapPoint = {
   id: string;
@@ -19,6 +20,8 @@ export type PointProps = {
   title: string;
   mode?: "mock" | "live";
   showMarker?: boolean;
+  userLocation?: MapCoordinate;
+  centerRevision?: number;
   points?: MapPoint[];
   onSelect?: (id: string) => void;
 };
@@ -29,6 +32,8 @@ function LivePointMap({
   points,
   onSelect,
   showMarker = true,
+  userLocation,
+  centerRevision,
   onViewportChange,
   activeId,
   fitToPoints = true,
@@ -70,21 +75,35 @@ function LivePointMap({
   }, []);
   useEffect(() => {
     if (ready) provider.current?.panTo({ latitude, longitude });
-  }, [ready, latitude, longitude]);
+  }, [ready, latitude, longitude, centerRevision]);
   useEffect(() => {
     if (!ready || !provider.current) return;
     const map = provider.current;
-    const markers = (points || []).map((p) => ({
+    const markers: Marker[] = (points || []).map((p) => ({
       id: p.id,
       coordinate: { latitude: p.latitude, longitude: p.longitude },
       title: p.title,
     }));
-    if (!markers.length && showMarker)
+    if (!markers.length && showMarker && !userLocation)
       markers.push({
         id: "selected-place",
         coordinate: { latitude, longitude },
         title,
       });
+    if (userLocation) {
+      markers.push({
+        id: "current-user-location-halo",
+        kind: "user-location-halo",
+        coordinate: userLocation,
+        title: "현재 위치",
+      });
+      markers.push({
+        id: "current-user-location",
+        kind: "user-location",
+        coordinate: userLocation,
+        title: "현재 위치",
+      });
+    }
     const ids = new Set(markers.map((m) => m.id));
     for (const m of map.getMarkers())
       if (!ids.has(m.id)) map.removeMarker(m.id);
@@ -95,6 +114,7 @@ function LivePointMap({
     ready,
     points,
     showMarker,
+    userLocation,
     title,
     latitude,
     longitude,
@@ -162,7 +182,10 @@ function LivePointMap({
 export function GooglePointMap(props: PointProps) {
   if (props.mode !== "live")
     return (
-      <MockPointMap key={`${props.latitude}:${props.longitude}`} {...props} />
+      <MockPointMap
+        key={`${props.latitude}:${props.longitude}:${props.centerRevision ?? 0}`}
+        {...props}
+      />
     );
   return <LivePointMap {...props} />;
 }

@@ -145,3 +145,24 @@ test("native bridge rejects invalid geometry and oversized point payloads", () =
     bounds: area,
   });
 });
+
+test("native bridge carries real user location separately and rejects invalid GPS", () => {
+  const state = {
+    type: "map-state",
+    center: { latitude: 37, longitude: 127 },
+    title: "지도",
+    points: [],
+    activeId: null,
+  };
+  const userLocation = { latitude: 37.5455, longitude: 127.0543 };
+  assert.deepEqual(
+    readMapState({ ...state, userLocation })?.userLocation,
+    userLocation,
+  );
+  for (const userLocation of [
+    null,
+    { latitude: NaN, longitude: 0 },
+    { latitude: 91, longitude: 0 },
+  ])
+    assert.equal(readMapState({ ...state, userLocation }), null);
+});

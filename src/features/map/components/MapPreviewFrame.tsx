@@ -22,6 +22,7 @@ export function MapPreviewFrame({
     <GooglePointMap
       {...(selected || initial)}
       mode={mode}
+      userLocation={view === "current" ? initial : undefined}
       title={
         selected?.title ||
         (view === "current"

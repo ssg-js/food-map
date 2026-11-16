@@ -37,6 +37,11 @@ export function SelectedPlaceMap({
     latitude: number;
     longitude: number;
   } | null>(null);
+  const [userLocation, setUserLocation] = useState<{
+    latitude: number;
+    longitude: number;
+  }>();
+  const [centerRevision, setCenterRevision] = useState(0);
   const requestVersion = useRef(0);
   const placeChosen = useRef(false);
   const [locating, setLocating] = useState(true);
@@ -71,6 +76,11 @@ export function SelectedPlaceMap({
     navigator.geolocation.getCurrentPosition(
       (p) => {
         if (requestVersion.current !== version) return;
+        setCenterRevision((revision) => revision + 1);
+        setUserLocation({
+          latitude: p.coords.latitude,
+          longitude: p.coords.longitude,
+        });
         setPosition({
           latitude: p.coords.latitude,
           longitude: p.coords.longitude,
@@ -141,6 +151,8 @@ export function SelectedPlaceMap({
       {mode === "mock" || apiKey ? (
         <GooglePointMap
           mode={mode}
+          userLocation={userLocation}
+          centerRevision={centerRevision}
           showMarker={!!(position || place?.location)}
           points={mapPoints}
           onViewportChange={onViewportChange}

@@ -147,6 +147,11 @@ export class GoogleMapProvider implements IMapProvider {
 
     const listeners = [
       googleMarker.addListener("click", () => {
+        if (
+          marker.kind === "user-location" ||
+          marker.kind === "user-location-halo"
+        )
+          return;
         this.emit("marker_click", {
           markerId: marker.id,
           coordinate: marker.coordinate,
@@ -176,16 +181,20 @@ export class GoogleMapProvider implements IMapProvider {
 
   highlightMarker(id: string | null): void {
     for (const [key, entry] of this.markers) {
-      const active = key === id;
+      const location = entry.marker.kind === "user-location";
+      const halo = entry.marker.kind === "user-location-halo";
+      const active = !location && !halo && key === id;
       entry.googleMarker.setIcon?.({
         path: 0,
-        scale: active ? 10.8 : 9,
+        scale: halo ? 17 : location ? 7 : active ? 10.8 : 9,
         fillColor: active ? "#1b64da" : "#3182f6",
-        fillOpacity: 1,
+        fillOpacity: halo ? 0.16 : 1,
         strokeColor: "#ffffff",
-        strokeWeight: 2,
+        strokeWeight: halo ? 0 : location ? 3 : 2,
       });
-      entry.googleMarker.setZIndex?.(active ? 100 : 1);
+      entry.googleMarker.setZIndex?.(
+        location ? 200 : halo ? 199 : active ? 100 : 1,
+      );
     }
   }
   removeMarker(markerId: string): void {

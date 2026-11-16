@@ -7,3 +7,9 @@
 마커/Google 내용은 화면 메모리에만 유지, viewport도 DB에 저장하지 않는다.
 
 실제 구현 캡처: [데스크톱](../../../../docs/screenshots/viewport-search-desktop.png), [모바일 웹](../../../../docs/screenshots/viewport-search-mobile.png).
+
+## 현재 위치 마커 보완 · 2026-11-17
+- 현재 위치는 번호 없는 작은 파란 점, 흰 테두리, 반투명 바깥 원으로 표현한다.
+- 음식점 검색 마커와 독립적으로 표시하며 목록 hover·선택 시 크기와 스타일을 바꾸지 않는다.
+- 실제 위치 권한/좌표가 없으면 표시하지 않는다. 지도 이동으로 화면 밖에 나간 경우 현재 위치 버튼으로 복귀한다.
+- 결과 캡처: `docs/screenshots/current-location-desktop.png`, `docs/screenshots/current-location-mobile.png`.

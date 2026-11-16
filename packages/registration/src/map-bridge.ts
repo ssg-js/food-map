@@ -7,6 +7,8 @@ import {
 export interface SearchMapState {
   type: "map-state";
   center: MapCoordinate;
+  userLocation?: MapCoordinate;
+  centerRevision?: number;
   title: string;
   points: Place[];
   activeId: string | null;
@@ -17,6 +19,17 @@ export type SearchMapEvent =
   | { type: "select" | "hover"; id: string | null };
 function object(v: unknown): v is Record<string, unknown> {
   return !!v && typeof v === "object";
+}
+function coordinate(v: unknown): v is MapCoordinate {
+  return (
+    object(v) &&
+    typeof v.latitude === "number" &&
+    typeof v.longitude === "number" &&
+    Number.isFinite(v.latitude) &&
+    Number.isFinite(v.longitude) &&
+    Math.abs(v.latitude) <= 90 &&
+    Math.abs(v.longitude) <= 180
+  );
 }
 export function readMapState(value: unknown): SearchMapState | null {
   if (
@@ -29,6 +42,11 @@ export function readMapState(value: unknown): SearchMapState | null {
     !Number.isFinite(value.center.longitude) ||
     Math.abs(value.center.latitude) > 90 ||
     Math.abs(value.center.longitude) > 180 ||
+    (value.userLocation !== undefined && !coordinate(value.userLocation)) ||
+    (value.centerRevision !== undefined &&
+      (typeof value.centerRevision !== "number" ||
+        !Number.isSafeInteger(value.centerRevision) ||
+        value.centerRevision < 0)) ||
     typeof value.title !== "string" ||
     value.title.length > 300 ||
     !Array.isArray(value.points) ||

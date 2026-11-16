@@ -21,6 +21,7 @@ test("map automatically centers on granted user location", async ({
   const map = page.getByRole("region", { name: "현재 위치 지도", exact: true });
   await expect(map).toHaveAttribute("data-latitude", "35.1796");
   await expect(map).toHaveAttribute("data-longitude", "129.0756");
+  await expect(page.getByTestId("current-location-marker")).toBeVisible();
   await expect(
     page.getByText("현재 위치를 표시했어요. 오차 약 20m"),
   ).toBeVisible();
@@ -47,6 +48,7 @@ test("permission denial keeps fallback map and retry available", async ({
       exact: true,
     }),
   ).toHaveAttribute("data-latitude", "37.5665");
+  await expect(page.getByTestId("current-location-marker")).toHaveCount(0);
   await expect(
     page.getByText(/위치 권한이 꺼져 있어 기본 지도를 표시해요/),
   ).toBeVisible();
@@ -98,4 +100,41 @@ test("late automatic location response cannot replace selected restaurant", asyn
   await expect(
     page.getByRole("button", { name: "모의 돈카츠 성수점 핀", exact: true }),
   ).toHaveAttribute("data-latitude", "37.5445");
+});
+
+test("current location stays distinct after search, hover and selection", async ({
+  page,
+  context,
+}, info) => {
+  await context.grantPermissions(["geolocation"]);
+  await context.setGeolocation({ latitude: 37.5455, longitude: 127.0543 });
+  await login(page);
+  await page.goto("/map");
+  const dot = page.getByTestId("current-location-marker");
+  await expect(dot).toBeVisible();
+  await page.getByLabel("대표 메뉴로 찾기", { exact: true }).fill("맛집");
+  await page.getByRole("button", { name: "검색", exact: true }).click();
+  await expect(page.locator(".search-map-pin")).toHaveCount(2);
+  const row = page
+    .locator(".candidate-row")
+    .filter({ hasText: "모의 돈카츠 성수점" });
+  await row.hover();
+  await expect(dot).toBeVisible();
+  await expect(dot).toHaveCSS("width", "18px");
+  await row.click();
+  await expect(dot).toHaveAttribute("data-latitude", "37.5455");
+  await expect(dot).toHaveAttribute("data-longitude", "127.0543");
+  await expect(dot).toBeVisible();
+  await page.screenshot({
+    path: `docs/screenshots/current-location-${info.project.name}.png`,
+  });
+  await page
+    .getByRole("button", { name: "모의 지도 강남으로 이동", exact: true })
+    .click();
+  await expect(dot).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "현재 위치 표시", exact: true })
+    .click();
+  await expect(dot).toBeVisible();
+  await expect(page.locator(".search-map-pin")).toHaveCount(2);
 });

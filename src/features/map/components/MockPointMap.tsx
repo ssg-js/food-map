@@ -141,20 +141,41 @@ export function MockPointMap(props: PointProps) {
             </button>
           ))}
       </div>
+      {props.userLocation && inViewport(props.userLocation, bounds) && (
+        <div
+          role="img"
+          aria-label="현재 위치"
+          data-testid="current-location-marker"
+          data-latitude={props.userLocation.latitude}
+          data-longitude={props.userLocation.longitude}
+          className="mock-location-dot"
+          style={{
+            left: `${(((props.userLocation.longitude - bounds.west + 360) % 360) / width) * 100}%`,
+            top: `${((bounds.north - props.userLocation.latitude) / (bounds.north - bounds.south)) * 100}%`,
+            zIndex: 30,
+            pointerEvents: "none",
+          }}
+        />
+      )}
       {!props.points?.length &&
+        !props.userLocation &&
         props.showMarker !== false &&
         inViewport(
           { latitude: props.latitude, longitude: props.longitude },
           bounds,
         ) && (
           <div
-            aria-hidden="true"
-            className="mock-location-dot"
+            aria-label={props.title}
+            role="img"
+            className="search-map-pin"
             style={{
               left: `${(((props.longitude - bounds.west + 360) % 360) / width) * 100}%`,
               top: `${((bounds.north - props.latitude) / (bounds.north - bounds.south)) * 100}%`,
+              transform: "translate(-50%,-50%)",
             }}
-          />
+          >
+            1
+          </div>
         )}
       <div className="mock-map-zoom">
         <button

@@ -62,6 +62,9 @@ export function SearchMapBridge({ mode }: { mode: "mock" | "live" }) {
       <GooglePointMap
         {...state.center}
         title={state.title}
+        userLocation={state.userLocation}
+        centerRevision={state.centerRevision}
+        showMarker={false}
         mode={mode}
         points={points}
         activeId={state.activeId}
