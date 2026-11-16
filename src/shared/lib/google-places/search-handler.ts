@@ -1,3 +1,4 @@
+import { validViewport, inViewport } from "@food-map/registration";
 import { SearchBlockedError } from "./search-budget";
 const HEADERS = { "Cache-Control": "no-store, max-age=0" };
 export interface SearchDependencies {
@@ -20,6 +21,19 @@ export async function handlePlaceSearch(
   const q = new URL(request.url).searchParams.get("q")?.trim() ?? "";
   if (q.length < 2 || q.length > 200)
     return reply({ message: "검색어를 2~200자로 입력해주세요." }, 400);
+  const rawBounds = new URL(request.url).searchParams.get("bounds");
+  const viewport: unknown = (() => {
+    try {
+      return rawBounds && rawBounds.length < 300 ? JSON.parse(rawBounds) : null;
+    } catch {
+      return null;
+    }
+  })();
+  if (!validViewport(viewport))
+    return reply(
+      { message: "지도의 검색 범위를 확인해주세요.", code: "INVALID_VIEWPORT" },
+      400,
+    );
   if (!deps.enabled || !deps.apiKey)
     return reply(
       {
@@ -45,6 +59,12 @@ export async function handlePlaceSearch(
         },
         body: JSON.stringify({
           textQuery: q,
+          locationRestriction: {
+            rectangle: {
+              low: { latitude: viewport.south, longitude: viewport.west },
+              high: { latitude: viewport.north, longitude: viewport.east },
+            },
+          },
           includedType: "restaurant",
           strictTypeFiltering: true,
           languageCode: "ko",
@@ -82,7 +102,8 @@ export async function handlePlaceSearch(
       };
       return typeof p.id === "string" &&
         typeof p.displayName?.text === "string" &&
-        typeof p.formattedAddress === "string"
+        typeof p.formattedAddress === "string" &&
+        inViewport(p.location, viewport)
         ? [
             {
               placeId: p.id,

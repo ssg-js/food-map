@@ -1,5 +1,6 @@
 "use client";
-import { useRef, useState } from "react";
+import { viewportKey, type MapViewport } from "./viewport";
+import { useCallback, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   MAX_CATEGORY_LENGTH,
@@ -15,6 +16,21 @@ import {
 export function useRegistration(api: RegistrationApi) {
   const queryClient = useQueryClient();
   const selectionVersion = useRef(0);
+  const [viewport, setArea] = useState<MapViewport | null>(null);
+  const [searchedViewport, setSearchedViewport] = useState<MapViewport | null>(
+    null,
+  );
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const setViewport = useCallback(
+    (v: MapViewport) =>
+      setArea((old) => (old && viewportKey(old) === viewportKey(v) ? old : v)),
+    [],
+  );
+  const viewportDirty = !!(
+    viewport &&
+    searchedViewport &&
+    viewportKey(viewport) !== viewportKey(searchedViewport)
+  );
   const [searchInput, setSearchInput] = useState("");
   const [foodQuery, setFoodQuery] = useState("");
   const [dishQuery, setDishQuery] = useState("");
@@ -82,10 +98,18 @@ export function useRegistration(api: RegistrationApi) {
     },
   });
   const searchMutation = useMutation({
-    mutationFn: api.search,
+    mutationFn: ({
+      query,
+      viewport,
+    }: {
+      query: string;
+      viewport: MapViewport;
+    }) => api.search(query, viewport),
     retry: false,
     gcTime: 0,
-    onSuccess: () => {
+    onSuccess: (_items, variables) => {
+      setSearchedViewport(variables.viewport);
+      setHoveredId(null);
       selectionVersion.current++;
       setSelectedPlace(null);
       setSelectedCategoryIds([]);
@@ -104,12 +128,13 @@ export function useRegistration(api: RegistrationApi) {
     ...searchMutation,
     isFetching: searchMutation.isPending,
     refetch: () => {
-      if (!searchMutation.isPending && submittedQuery)
-        searchMutation.mutate(submittedQuery);
+      if (!searchMutation.isPending && submittedQuery && viewport)
+        searchMutation.mutate({ query: submittedQuery, viewport });
     },
   };
   const busy = createCategory.isPending || save.isPending || existing.isPending;
   const canSearch =
+    !!viewport &&
     !busy &&
     !search.isFetching &&
     composedQuery.length >= MIN_SEARCH_LENGTH &&
@@ -126,11 +151,17 @@ export function useRegistration(api: RegistrationApi) {
     !save.isSuccess &&
     !newCategoryName.trim();
   function submitSearch() {
-    if (!canSearch) return;
+    if (!canSearch || !viewport) return;
     const q = composedQuery;
     setSubmittedQuery(q);
     setSearchNotice(null);
-    searchMutation.mutate(q);
+    searchMutation.mutate({ query: q, viewport });
+  }
+  function searchHere() {
+    if (!viewport || !submittedQuery || busy || searchMutation.isPending)
+      return;
+    setSearchNotice(null);
+    searchMutation.mutate({ query: submittedQuery, viewport });
   }
   function selectPlace(place: Place) {
     if (busy || search.isFetching || selectedPlace?.placeId === place.placeId)
@@ -213,6 +244,8 @@ export function useRegistration(api: RegistrationApi) {
     createCategory.reset();
     existing.reset();
     searchMutation.reset();
+    setSearchedViewport(null);
+    setHoveredId(null);
   }
   return {
     foodQuery,
@@ -220,6 +253,12 @@ export function useRegistration(api: RegistrationApi) {
     dishQuery,
     setDishQuery,
     composedQuery,
+    viewport,
+    setViewport,
+    viewportDirty,
+    hoveredId,
+    setHoveredId,
+    searchHere,
     searchInput,
     setSearchInput,
     submittedQuery,

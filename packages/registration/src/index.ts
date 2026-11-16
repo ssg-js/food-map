@@ -8,3 +8,7 @@ export * from "./mock-places";
 export { setSessionToken, sessionHeaders } from "./session";
 
 export { createAccountApi } from "./account-api";
+
+export * from "./viewport";
+
+export * from "./map-bridge";

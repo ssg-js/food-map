@@ -11,7 +11,11 @@ import {
   isSearchBlocked,
 } from "../../packages/registration/src/api";
 import type { PrismaClient } from "@prisma/client";
-const request = () => new Request("http://localhost/api/places/search?q=성수");
+const bounds = { south: 37, west: 126, north: 38, east: 128 };
+const request = () =>
+  new Request(
+    `http://localhost/api/places/search?${new URLSearchParams({ q: "성수", bounds: JSON.stringify(bounds) })}`,
+  );
 for (const code of [
   "SEARCH_LIMIT_REACHED",
   "SEARCH_BUDGET_UNCONFIGURED",
@@ -58,6 +62,7 @@ test("reservation is awaited before a single Google request; fieldmask cannot be
             id: "p",
             displayName: { text: "식당" },
             formattedAddress: "서울",
+            location: { latitude: 37.5, longitude: 127 },
             rating: 5,
           },
         ],
@@ -66,7 +71,13 @@ test("reservation is awaited before a single Google request; fieldmask cannot be
   });
   assert.deepEqual(events, ["reserved", "fetch"]);
   assert.deepEqual(await response.json(), [
-    { placeId: "p", name: "식당", address: "서울", attributions: [] },
+    {
+      placeId: "p",
+      name: "식당",
+      address: "서울",
+      location: { latitude: 37.5, longitude: 127 },
+      attributions: [],
+    },
   ]);
 });
 test("provider 429 and timeout do not retry or refund reservation", async () => {

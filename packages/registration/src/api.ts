@@ -1,3 +1,4 @@
+import type { MapViewport } from "./viewport";
 import { sessionHeaders } from "./session";
 export interface Place {
   placeId: string;
@@ -130,12 +131,12 @@ export function createRegistrationApi(
     }
   }
   return {
-    async search(query: string): Promise<Place[]> {
+    async search(query: string, viewport?: MapViewport): Promise<Place[]> {
       const trimmed = query.trim();
       if (trimmed.length < MIN_SEARCH_LENGTH)
         throw new Error(`검색어를 ${MIN_SEARCH_LENGTH}자 이상 입력해주세요.`);
       const body = await request(
-        `/api/places/search?${new URLSearchParams({ q: trimmed })}`,
+        `/api/places/search?${new URLSearchParams({ q: trimmed, ...(viewport ? { bounds: JSON.stringify(viewport) } : {}) })}`,
       );
       if (!Array.isArray(body) || !body.every(isPlace))
         throw new Error("장소 검색 응답을 확인하지 못했어요.");
