@@ -14,6 +14,7 @@ import {
   Text,
   TextInput,
   View,
+  useWindowDimensions,
 } from "react-native";
 import {
   SafeAreaView,
@@ -30,22 +31,28 @@ import { SearchNotice } from "./SearchNotice";
 import { api } from "../../shared/api";
 import { theme as t } from "../../shared/theme";
 import { ActionButton, Feedback } from "../../shared/ui";
-import { MapPreview } from "../map/MapPreview";
+import { SearchMap } from "../map/SearchMap";
 
 function Candidate({
   place,
   selected,
   disabled,
   onPress,
+  onHighlight,
 }: {
   place: Place;
   selected: boolean;
   disabled: boolean;
   onPress: () => void;
+  onHighlight: (id: string | null) => void;
 }) {
   return (
     <Pressable
       onPress={onPress}
+      onHoverIn={() => onHighlight(place.placeId)}
+      onHoverOut={() => onHighlight(null)}
+      onFocus={() => onHighlight(place.placeId)}
+      onBlur={() => onHighlight(null)}
       disabled={disabled}
       accessibilityRole="button"
       accessibilityState={{ selected, disabled }}
@@ -163,6 +170,7 @@ export function RegistrationScreen() {
   const insets = useSafeAreaInsets();
   const search = useRef<ComponentRef<typeof TextInput>>(null);
   const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
+  const window = useWindowDimensions();
   const step = flow.save.isSuccess ? 3 : flow.selectedPlace ? 2 : 1;
   return (
     <SafeAreaView edges={["top", "left", "right"]} style={s.safe}>
@@ -191,18 +199,21 @@ export function RegistrationScreen() {
         style={s.flex}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
+        <SearchMap
+          flow={flow}
+          height={Math.max(170, Math.min(300, window.height * 0.32))}
+        />
         <ScrollView
           ref={scroll}
           style={s.flex}
-          contentContainerStyle={s.scrollContent}
+          contentContainerStyle={[
+            s.scrollContent,
+            { paddingBottom: Math.max(insets.bottom, 12) },
+          ]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           automaticallyAdjustKeyboardInsets={false}
         >
-          <MapPreview
-            key={flow.selectedPlace?.placeId ?? "empty"}
-            place={flow.selectedPlace}
-          />
           {flow.selectedPlace && (
             <View style={{ padding: 16, backgroundColor: "#e8f3ff" }}>
               <Text style={s.sectionTitle}>{flow.selectedPlace.name}</Text>
@@ -257,7 +268,6 @@ export function RegistrationScreen() {
                 ),
               )}
             </View>
-            <OperatorAccess />
             <Text style={s.fieldLabel}>음식 종류로 찾기</Text>
             <TextInput
               accessibilityLabel="음식 종류로 찾기"
@@ -357,11 +367,7 @@ export function RegistrationScreen() {
                       검색해보세요.
                     </Feedback>
                   ) : (
-                    <ScrollView
-                      style={s.candidateList}
-                      nestedScrollEnabled
-                      keyboardShouldPersistTaps="handled"
-                    >
+                    <View>
                       {flow.search.data.map((place) => (
                         <Candidate
                           key={place.placeId}
@@ -371,9 +377,10 @@ export function RegistrationScreen() {
                           }
                           disabled={flow.busy}
                           onPress={() => flow.selectPlace(place)}
+                          onHighlight={flow.setHoveredId}
                         />
                       ))}
-                    </ScrollView>
+                    </View>
                   )}
                   <Text style={s.credit}>장소 검색 제공 Google Maps</Text>
                 </View>
@@ -439,6 +446,7 @@ export function RegistrationScreen() {
                 )}
               </View>
             )}
+            <OperatorAccess />
             <Text style={s.footer}>
               저장 목록에서 카테고리로 맛집을 찾아보세요.
             </Text>
@@ -496,8 +504,8 @@ const s = StyleSheet.create({
     backgroundColor: "white",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    marginTop: -18,
-    padding: 20,
+    marginTop: 0,
+    padding: 16,
     paddingTop: 12,
     flex: 1,
   },
@@ -519,7 +527,7 @@ const s = StyleSheet.create({
   steps: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginVertical: 24,
+    marginVertical: 12,
   },
   step: { flexDirection: "row", alignItems: "center", gap: 5 },
   stepCircle: {

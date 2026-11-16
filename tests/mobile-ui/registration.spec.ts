@@ -26,6 +26,10 @@ test("Expo UI authenticates and saves through real personal API", async ({
       .getByRole("region", { name: "현재 위치 지도", exact: true }),
   ).toHaveAttribute("data-latitude", "35.1796");
   await page
+    .frameLocator("iframe")
+    .getByRole("button", { name: "모의 지도 성수로 이동", exact: true })
+    .click();
+  await page
     .getByRole("textbox", { name: "대표 메뉴로 찾기", exact: true })
     .fill("돈카츠");
   await page.getByRole("button", { name: "검색", exact: true }).click();
@@ -89,6 +93,75 @@ test("Expo account security issues a recovery key and recovery screen finds user
   ).toBeVisible();
   await page.screenshot({
     path: `docs/screenshots/account-security-expo-${info.project.name}.png`,
+    fullPage: true,
+  });
+});
+
+test("Expo viewport search keeps map mounted and links list highlight to markers", async ({
+  page,
+  context,
+}, info) => {
+  await context.grantPermissions(["geolocation"]);
+  await context.setGeolocation({ latitude: 35.1796, longitude: 129.0756 });
+  await page.goto("/");
+  await page
+    .getByRole("textbox", { name: "아이디", exact: true })
+    .fill("testa");
+  await page
+    .getByLabel("비밀번호", { exact: true })
+    .fill("Test-password-12345");
+  await page.getByRole("button", { name: "로그인", exact: true }).click();
+  const frame = page.frameLocator("iframe");
+  await expect(
+    frame.getByRole("region", { name: "현재 위치 지도", exact: true }),
+  ).toHaveAttribute("data-latitude", "35.1796");
+  let navigations = 0;
+  page.on("framenavigated", (f) => {
+    if (f !== page.mainFrame()) navigations++;
+  });
+  await frame
+    .getByRole("button", { name: "모의 지도 성수로 이동", exact: true })
+    .click();
+  await page
+    .getByRole("textbox", { name: "대표 메뉴로 찾기", exact: true })
+    .fill("맛집");
+  await page.getByRole("button", { name: "검색", exact: true }).click();
+  const pin = frame.getByRole("button", {
+    name: "모의 돈카츠 성수점 핀",
+    exact: true,
+  });
+  await expect(pin).toBeVisible();
+  await expect(
+    frame.getByRole("button", { name: "모의 파스타 성수점 핀", exact: true }),
+  ).toBeVisible();
+  const row = page.getByRole("button", { name: /^모의 돈카츠 성수점,/ });
+  await row.hover();
+  await expect(pin).toHaveAttribute("data-highlighted", "true");
+  await page
+    .getByRole("textbox", { name: "대표 메뉴로 찾기", exact: true })
+    .hover();
+  await expect(pin).toHaveAttribute("data-highlighted", "false");
+  await frame
+    .getByRole("button", { name: "모의 지도 강남으로 이동", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "현 지도에서 검색", exact: true })
+    .click();
+  await expect(
+    frame.getByRole("button", { name: "모의 평양냉면 강남점 핀", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /^모의 평양냉면 강남점,/ }),
+  ).toBeVisible();
+  expect(navigations).toBe(0);
+  expect(
+    await page.evaluate(() => ({
+      vertical: document.documentElement.scrollHeight <= innerHeight + 1,
+      horizontal: document.documentElement.scrollWidth <= innerWidth + 1,
+    })),
+  ).toEqual({ vertical: true, horizontal: true });
+  await page.screenshot({
+    path: `docs/screenshots/viewport-search-expo-${info.project.name}.png`,
     fullPage: true,
   });
 });
