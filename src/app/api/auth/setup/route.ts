@@ -3,12 +3,18 @@ import { auth } from "@/shared/lib/auth";
 import { prisma } from "@/shared/lib/prisma";
 import { sameOrigin } from "@/shared/lib/admin-auth";
 import { z } from "zod";
-const schema = z.object({
-  token: z.string().max(200),
-  username: z.string().regex(/^[a-zA-Z0-9_]{3,32}$/),
-  password: z.string().min(12).max(128),
-  adoptLegacy: z.boolean().default(false),
-});
+const schema = z
+  .object({
+    token: z.string().max(200),
+    username: z.string().regex(/^[a-zA-Z0-9_]{3,32}$/),
+    password: z.string().min(12).max(128),
+    passwordConfirmation: z.string().min(12).max(128),
+    adoptLegacy: z.boolean().default(false),
+  })
+  .refine((v) => v.password === v.passwordConfirmation, {
+    message: "비밀번호 확인이 일치하지 않아요.",
+    path: ["passwordConfirmation"],
+  });
 export async function POST(request: Request) {
   if (!process.env.BETTER_AUTH_SECRET)
     return Response.json(
@@ -21,9 +27,19 @@ export async function POST(request: Request) {
       { status: 403 },
     );
   const b = schema.safeParse(await request.json().catch(() => null));
+  if (!b.success)
+    return Response.json(
+      {
+        message: b.error.issues.some(
+          (issue) => issue.path[0] === "passwordConfirmation",
+        )
+          ? "비밀번호 확인을 입력하고 두 비밀번호가 같은지 확인해주세요."
+          : "설정 토큰과 입력 내용을 확인해주세요.",
+      },
+      { status: 400 },
+    );
   const secret = process.env.PERSONAL_SETUP_TOKEN;
   if (
-    !b.success ||
     !secret ||
     Buffer.byteLength(b.data.token) !== Buffer.byteLength(secret) ||
     !timingSafeEqual(Buffer.from(b.data.token), Buffer.from(secret))

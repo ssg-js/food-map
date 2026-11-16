@@ -9,9 +9,18 @@ export function AccountForm({ setup = false }: { setup?: boolean }) {
         className="account-card"
         onSubmit={async (e) => {
           e.preventDefault();
-          setBusy(true);
           setError("");
           const f = new FormData(e.currentTarget);
+          if (setup && f.get("password") !== f.get("passwordConfirmation")) {
+            setError("비밀번호 확인이 일치하지 않아요. 다시 입력해주세요.");
+            (
+              e.currentTarget.elements.namedItem(
+                "passwordConfirmation",
+              ) as HTMLInputElement
+            )?.focus();
+            return;
+          }
+          setBusy(true);
           try {
             const r = await fetch(
               setup ? "/api/auth/setup" : "/api/auth/login",
@@ -21,6 +30,9 @@ export function AccountForm({ setup = false }: { setup?: boolean }) {
                 body: JSON.stringify({
                   username: f.get("username"),
                   password: f.get("password"),
+                  ...(setup
+                    ? { passwordConfirmation: f.get("passwordConfirmation") }
+                    : {}),
                   token: f.get("token"),
                   adoptLegacy: f.get("adoptLegacy") === "on",
                 }),
@@ -69,14 +81,35 @@ export function AccountForm({ setup = false }: { setup?: boolean }) {
         </label>
         {setup && (
           <>
-            <p>영문·숫자·밑줄 아이디, 비밀번호 12자 이상</p>
+            <label>
+              비밀번호 확인
+              <input
+                name="passwordConfirmation"
+                type="password"
+                required
+                minLength={12}
+                maxLength={128}
+                autoComplete="new-password"
+                aria-invalid={error.includes("일치하지")}
+                aria-describedby={error ? "account-form-error" : undefined}
+                onInput={() => setError("")}
+              />
+            </label>
+            <p>
+              비밀번호를 한 번 더 입력해주세요. 영문·숫자·밑줄 아이디, 비밀번호
+              12자 이상
+            </p>
             <label className="account-check">
               <input name="adoptLegacy" type="checkbox" />
               기존 공용 맛집과 카테고리를 내 계정으로 가져오기
             </label>
           </>
         )}
-        {error && <p role="alert">{error}</p>}
+        {error && (
+          <p id="account-form-error" role="alert">
+            {error}
+          </p>
+        )}
         <button className="button button-primary" disabled={busy}>
           {busy ? "처리 중…" : setup ? "계정 만들기" : "로그인"}
         </button>

@@ -358,6 +358,7 @@ test("atomic shared query cap includes details and returns reset time", async ({
 
 test("one-time private account setup preserves explicitly adopted legacy data", async ({
   request,
+  page,
 }) => {
   const env = JSON.parse(
     await readFile("/private/tmp/food-map-product-test-env.json", "utf8"),
@@ -404,6 +405,7 @@ test("one-time private account setup preserves explicitly adopted legacy data", 
       token: env.PERSONAL_SETUP_TOKEN,
       username: "newowner",
       password: "Owner-password-12345",
+      passwordConfirmation: "Owner-password-12345",
       adoptLegacy: true,
     };
     expect(
@@ -414,6 +416,62 @@ test("one-time private account setup preserves explicitly adopted legacy data", 
         })
       ).status(),
     ).toBe(400);
+    const missingConfirmation = {
+      token: payload.token,
+      username: payload.username,
+      password: payload.password,
+      adoptLegacy: payload.adoptLegacy,
+    };
+    expect(
+      (
+        await request.post("/api/auth/setup", {
+          headers: { Origin: origin },
+          data: missingConfirmation,
+        })
+      ).status(),
+    ).toBe(400);
+    expect(
+      (
+        await request.post("/api/auth/setup", {
+          headers: { Origin: origin },
+          data: {
+            ...payload,
+            passwordConfirmation: "Different-password-12345",
+          },
+        })
+      ).status(),
+    ).toBe(400);
+    expect(
+      (await db.bootstrapState.findUniqueOrThrow({ where: { id: "personal" } }))
+        .state,
+    ).toBe("READY");
+    expect(
+      await db.user.count({ where: { role: { not: "QUARANTINED" } } }),
+    ).toBe(0);
+    let submissions = 0;
+    page.on("request", (r) => {
+      if (r.url().endsWith("/api/auth/setup") && r.method() === "POST")
+        submissions++;
+    });
+    await page.goto("/setup");
+    await page
+      .getByLabel("최초 설정 토큰", { exact: true })
+      .fill(payload.token);
+    await page.getByLabel("아이디", { exact: true }).fill(payload.username);
+    await page.getByLabel("비밀번호", { exact: true }).fill(payload.password);
+    await page
+      .getByLabel("비밀번호 확인", { exact: true })
+      .fill("Different-password-12345");
+    await page
+      .getByRole("button", { name: "계정 만들기", exact: true })
+      .click();
+    await expect(page.locator("#account-form-error")).toContainText(
+      "비밀번호 확인이 일치하지 않아요",
+    );
+    await expect(
+      page.getByLabel("비밀번호 확인", { exact: true }),
+    ).toBeFocused();
+    expect(submissions).toBe(0);
     const results = await Promise.all(
       [1, 2].map(() =>
         request.post("/api/auth/setup", {
