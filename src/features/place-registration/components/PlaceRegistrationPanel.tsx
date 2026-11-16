@@ -1,16 +1,14 @@
 "use client";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import {
-  createRegistrationApi,
   MIN_SEARCH_LENGTH,
-  useRegistration,
+  type RegistrationController,
 } from "@food-map/registration";
 import { Icon } from "@/shared/ui/icon";
 import { PlaceCandidateRow } from "./PlaceCandidateRow";
 import { RegistrationSteps } from "./RegistrationSteps";
 import { CategoryGroups } from "./CategoryGroups";
 import { SearchNotice } from "./SearchNotice";
-const api = createRegistrationApi();
 function ErrorMessage({
   message,
   onRetry,
@@ -30,9 +28,17 @@ function ErrorMessage({
     </div>
   );
 }
-export function PlaceRegistrationPanel() {
-  const flow = useRegistration(api);
+export function PlaceRegistrationPanel({
+  flow,
+}: {
+  flow: RegistrationController;
+}) {
   const searchRef = useRef<HTMLInputElement>(null);
+  const resultsRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (flow.search.isSuccess && window.matchMedia("(max-width:700px)").matches)
+      resultsRef.current?.scrollIntoView({ block: "start" });
+  }, [flow.search.data, flow.search.isSuccess]);
   const step = flow.save.isSuccess ? 3 : flow.selectedPlace ? 2 : 1;
   return (
     <section
@@ -46,7 +52,7 @@ export function PlaceRegistrationPanel() {
       />
       <div className="panel-handle" aria-hidden="true" />
       <div className="panel-heading">
-        <p className="eyebrow">나만의 발견, 함께 쓰는 맛집지도</p>
+        <p className="eyebrow">이 지도 안에서 발견하는 나만의 맛집</p>
         <h1 id="registration-title">맛집 등록</h1>
         <p className="panel-description">발견한 맛집을 카테고리로 정리해요.</p>
       </div>
@@ -111,10 +117,14 @@ export function PlaceRegistrationPanel() {
           </button>
         </div>
         <p className="field-help" id="search-help">
-          {MIN_SEARCH_LENGTH}자 이상 입력한 뒤 검색해주세요.
+          {MIN_SEARCH_LENGTH}자 이상 입력한 뒤 현재 지도 범위에서 검색해주세요.
         </p>
       </form>
-      <div className="search-results" aria-busy={flow.search.isFetching}>
+      <div
+        ref={resultsRef}
+        className="search-results"
+        aria-busy={flow.search.isFetching}
+      >
         {!flow.submittedQuery && (
           <div className="empty-state">
             <span className="empty-icon">
@@ -161,7 +171,13 @@ export function PlaceRegistrationPanel() {
               ) : (
                 <ul className="candidate-list">
                   {flow.search.data.map((place) => (
-                    <li key={place.placeId}>
+                    <li
+                      key={place.placeId}
+                      onMouseEnter={() => flow.setHoveredId(place.placeId)}
+                      onMouseLeave={() => flow.setHoveredId(null)}
+                      onFocus={() => flow.setHoveredId(place.placeId)}
+                      onBlur={() => flow.setHoveredId(null)}
+                    >
                       <PlaceCandidateRow
                         place={place}
                         selected={flow.selectedPlace?.placeId === place.placeId}
@@ -199,7 +215,7 @@ export function PlaceRegistrationPanel() {
             </span>
           </div>
           <p className="field-help">
-            여러 개 선택할 수 있어요. 선택하지 않아도 저장돼요.
+            목적·음식 종류·대표 메뉴 중 하나 이상 선택해주세요.
           </p>
           {flow.categories.isPending && (
             <div className="loading-state" role="status">
@@ -286,7 +302,7 @@ export function PlaceRegistrationPanel() {
       )}
       <p className="panel-footer">
         <Icon name="info" width={14} height={14} />
-        등록한 맛집의 지도 표시는 준비 중이에요.
+        검색 결과를 지도에서 확인하고 카테고리로 보관해요.
       </p>
     </section>
   );

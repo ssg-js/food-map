@@ -1,15 +1,25 @@
 "use client";
-import type { Place } from "@food-map/registration";
+import type { Place, MapViewport } from "@food-map/registration";
 import { GooglePointMap } from "./GooglePointMap";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 export function SelectedPlaceMap({
   apiKey,
   selectedPlace,
   points,
   onSelect,
   mode = "mock",
+  searchMode = false,
+  onViewportChange,
+  activeId,
+  onHover,
+  showLocationMessage = true,
 }: {
   apiKey: string;
+  searchMode?: boolean;
+  showLocationMessage?: boolean;
+  onViewportChange?: (bounds: MapViewport) => void;
+  activeId?: string | null;
+  onHover?: (id: string | null) => void;
   points?: Place[];
   onSelect?: (p: Place) => void;
   mode?: "mock" | "live";
@@ -22,7 +32,7 @@ export function SelectedPlaceMap({
   } | null>(null);
   const place =
     (selectedPlace === undefined ? eventPlace : selectedPlace) ??
-    points?.find((p) => p.location);
+    (!searchMode ? points?.find((p) => p.location) : undefined);
   const [position, setPosition] = useState<{
     latitude: number;
     longitude: number;
@@ -39,13 +49,13 @@ export function SelectedPlaceMap({
         requestVersion.current++;
         setLocating(false);
         setPlace(p);
-        setPosition(null);
+        if (!searchMode) setPosition(null);
         setMessage("");
       }
     };
     window.addEventListener("food-map-place", select);
     return () => window.removeEventListener("food-map-place", select);
-  }, []);
+  }, [searchMode]);
   const locate = useCallback(() => {
     const version = ++requestVersion.current;
     placeChosen.current = false;
@@ -97,13 +107,28 @@ export function SelectedPlaceMap({
     };
   }, [locate, invalidateLocation]);
   const center = position ??
-    place?.location ?? { latitude: 37.5665, longitude: 126.978 };
+    (!searchMode ? place?.location : undefined) ?? {
+      latitude: 37.5665,
+      longitude: 126.978,
+    };
+  const mapPoints = useMemo(
+    () =>
+      (!searchMode && position ? [] : points)?.flatMap((p) =>
+        p.location ? [{ id: p.placeId, title: p.name, ...p.location }] : [],
+      ),
+    [points, position, searchMode],
+  );
   const q = position
     ? `${position.latitude},${position.longitude}`
     : place
       ? `place_id:${place.placeId}`
       : null;
-  const name = position ? "현재 위치" : (place?.name ?? "기본 지도 · 서울시청");
+  const name =
+    searchMode && place?.name
+      ? place.name
+      : position
+        ? "현재 위치"
+        : (place?.name ?? "기본 지도 · 서울시청");
   return (
     <div
       style={{
@@ -117,9 +142,11 @@ export function SelectedPlaceMap({
         <GooglePointMap
           mode={mode}
           showMarker={!!(position || place?.location)}
-          points={(position ? [] : points)?.flatMap((p) =>
-            p.location ? [{ id: p.placeId, title: p.name, ...p.location }] : [],
-          )}
+          points={mapPoints}
+          onViewportChange={onViewportChange}
+          activeId={activeId}
+          onHover={onHover}
+          fitToPoints={!searchMode}
           onSelect={(id) => {
             const p = points?.find((p) => p.placeId === id);
             if (p) {
@@ -127,7 +154,7 @@ export function SelectedPlaceMap({
               requestVersion.current++;
               setLocating(false);
               setMessage("");
-              setPosition(null);
+              if (!searchMode) setPosition(null);
               onSelect?.(p);
             }
           }}
@@ -153,23 +180,30 @@ export function SelectedPlaceMap({
       >
         {locating ? "위치 확인 중…" : "현재 위치 표시"}
       </button>
-      {message && (
+      {message && showLocationMessage && (
         <p
           role="status"
+          title={message}
           style={{
             position: "absolute",
             left: 16,
             right: 16,
-            top: 16,
+            top: searchMode ? undefined : 16,
+            bottom: searchMode ? 74 : undefined,
             background: "white",
-            padding: 12,
+            padding: searchMode ? 8 : 12,
+            fontSize: searchMode ? 12 : undefined,
+            lineHeight: searchMode ? "18px" : undefined,
+            whiteSpace: searchMode ? "nowrap" : undefined,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
             borderRadius: 12,
           }}
         >
           {message}
         </p>
       )}
-      {q && (
+      {q && !searchMode && (
         <a
           href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(position ? q : place!.name)}${!position && place ? `&query_place_id=${encodeURIComponent(place.placeId)}` : ""}`}
           target="_blank"

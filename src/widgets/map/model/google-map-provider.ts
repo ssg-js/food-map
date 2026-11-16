@@ -43,6 +43,7 @@ export class GoogleMapProvider implements IMapProvider {
     center_changed: new Set(),
     zoom_changed: new Set(),
     idle: new Set(),
+    bounds_changed: new Set(),
     click: new Set(),
     marker_click: new Set(),
   };
@@ -65,6 +66,7 @@ export class GoogleMapProvider implements IMapProvider {
       maxZoom: options.maxZoom,
       clickableIcons: false,
       disableDefaultUI: true,
+      gestureHandling: "greedy",
     });
 
     this.bindMapEvents();
@@ -172,6 +174,20 @@ export class GoogleMapProvider implements IMapProvider {
     markerEntry.googleMarker.setTitle(marker.title ?? "");
   }
 
+  highlightMarker(id: string | null): void {
+    for (const [key, entry] of this.markers) {
+      const active = key === id;
+      entry.googleMarker.setIcon?.({
+        path: 0,
+        scale: active ? 10.8 : 9,
+        fillColor: active ? "#1b64da" : "#3182f6",
+        fillOpacity: 1,
+        strokeColor: "#ffffff",
+        strokeWeight: 2,
+      });
+      entry.googleMarker.setZIndex?.(active ? 100 : 1);
+    }
+  }
   removeMarker(markerId: string): void {
     const markerEntry = this.markers.get(markerId);
 
@@ -216,6 +232,10 @@ export class GoogleMapProvider implements IMapProvider {
         const zoom = this.getZoom();
         this.zoom = zoom;
         this.emit("zoom_changed", zoom);
+      }),
+      this.googleMaps.event.addListener(this.map, "bounds_changed", () => {
+        const bounds = this.getBounds();
+        if (bounds) this.emit("bounds_changed", bounds);
       }),
       this.googleMaps.event.addListener(this.map, "idle", () => {
         const bounds = this.getBounds();

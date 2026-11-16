@@ -12,6 +12,7 @@ export interface GoogleMapOptions {
   maxZoom?: number;
   disableDefaultUI?: boolean;
   clickableIcons?: boolean;
+  gestureHandling?: "greedy" | "cooperative" | "auto" | "none";
 }
 
 export interface GoogleMapsEventListener {
@@ -51,6 +52,15 @@ export interface GoogleMap {
 }
 
 export interface GoogleMarker {
+  setIcon?(icon: {
+    path: number;
+    scale: number;
+    fillColor: string;
+    fillOpacity: number;
+    strokeColor: string;
+    strokeWeight: number;
+  }): void;
+  setZIndex?(z: number): void;
   setMap(map: GoogleMap | null): void;
   setPosition(position: GoogleLatLngLiteral): void;
   setTitle(title: string): void;
@@ -67,7 +77,7 @@ export interface GoogleMapsApi {
   event: {
     addListener(
       target: GoogleMap,
-      eventName: "center_changed" | "zoom_changed" | "idle",
+      eventName: "center_changed" | "zoom_changed" | "idle" | "bounds_changed",
       handler: () => void,
     ): GoogleMapsEventListener;
     addListener(

@@ -1621,3 +1621,27 @@ button:disabled[aria-pressed="true"] {
 .account-page{min-height:100dvh;display:grid;place-items:center;background:#f2f4f6;padding:24px}.account-card{width:min(100%,420px);padding:32px;background:white;border-radius:24px;display:grid;gap:18px}.account-card h1{font-size:28px;font-weight:750}.account-card label{display:grid;gap:8px}.account-card input:not([type=checkbox]){width:100%;padding:14px;border:1px solid #d1d6db;border-radius:12px}.account-card p{color:#6b7684;font-size:14px}.account-card .account-check{display:flex;align-items:center;gap:8px}
 
 .catalog-access{display:flex;align-items:center;gap:16px;flex-wrap:wrap}.account-card p[role=alert]{color:#d32f2f}
+
+/* Registration workspace owns the viewport; only its content panel scrolls. */
+.food-map-app{height:100dvh;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.food-map-app>.app-header{flex-shrink:0}
+.workspace-account{padding:0 16px;flex-shrink:0}
+.workspace-account .catalog-access{margin:0;padding:10px 14px;gap:12px;font-size:13px}
+.food-map-app>.workspace{width:100%;max-width:none;margin:0;flex:1;height:auto;min-height:0;grid-template-columns:minmax(320px,400px) minmax(0,1fr);padding:12px;gap:12px;overflow:hidden}
+.food-map-app .registration-panel{height:100%;min-height:0;max-height:100%;overflow-y:auto;padding:24px;overscroll-behavior:contain;scrollbar-gutter:stable}
+.food-map-app .map-pane{height:100%;min-height:0;margin:0;position:relative;overflow:hidden}
+.food-map-app .candidate-list{max-height:none;overflow:visible}
+.food-map-app .panel-heading h1{font-size:26px}
+.food-map-app .registration-steps{margin:16px 0}
+.food-map-app .category-section{margin-bottom:12px}
+.search-this-map{position:absolute;z-index:30;top:72px;left:50%;transform:translateX(-50%);box-shadow:0 3px 16px #191f2826;white-space:nowrap;max-width:90%}
+.mock-map-caption{position:absolute;top:12px;left:12px;right:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#ffffffed;border-radius:12px;padding:10px;font-size:12px;pointer-events:none;z-index:3}
+.mock-map-caption small{color:#6b7684}.mock-map-zoom{position:absolute;right:12px;top:100px;display:grid;gap:5px;z-index:25}.mock-map-zoom button,.mock-map-presets button{border:1px solid #d1d6db;background:white;border-radius:10px;min-width:40px;min-height:40px;padding:8px}.mock-map-presets{position:absolute;left:12px;bottom:12px;display:flex;gap:5px;z-index:25}
+.search-map-pin{position:absolute;background:#3182f6;color:white;border:3px solid white;border-radius:50%;width:36px;height:36px;box-shadow:0 2px 8px #0003;transition:transform .15s ease;cursor:pointer;font-weight:700}.search-map-pin[data-highlighted=true]{background:#1b64da;box-shadow:0 3px 14px #1b64da66}.mock-location-dot{position:absolute;left:50%;top:50%;width:18px;height:18px;background:#3182f6;border:3px solid white;border-radius:50%;box-shadow:0 0 0 10px #3182f622}
+@media(max-width:700px){
+.food-map-app .app-header{height:58px;padding:0 12px;gap:6px}.food-map-app .brand{font-size:19px}.food-map-app .brand-symbol{width:22px}.food-map-app .catalog-nav{gap:5px;font-size:11px}.food-map-app .install-button{font-size:10px;padding:6px;min-height:32px}.workspace-account{padding:0 8px}.workspace-account .catalog-access{font-size:11px;gap:8px;padding:6px 8px}.workspace-account .catalog-access span{display:none}
+.food-map-app>.workspace{display:flex;flex-direction:column;padding:0;gap:0}.food-map-app .map-pane{order:-1;height:clamp(165px,32dvh,300px);min-height:165px;flex-shrink:0;border-radius:0}.food-map-app .registration-panel{flex:1;height:auto;padding:16px;border-radius:20px 20px 0 0;margin:0;min-height:0}.food-map-app .panel-handle{display:none}.food-map-app .panel-heading h1{font-size:22px}.food-map-app .empty-state{padding:20px 8px}.food-map-app .map-pane .button{font-size:12px;padding:9px}.mock-map-caption{font-size:10px;padding:6px;top:5px;left:5px;right:5px}.mock-map-caption small{display:none}.search-this-map{top:48px}
+}
+@media(prefers-reduced-motion:reduce){.search-map-pin{transition:none}}
+
+@media(max-width:700px){.mock-map-zoom{top:auto;bottom:70px;right:8px}.food-map-app .map-pane>.button{bottom:12px!important}}

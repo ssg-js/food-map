@@ -23,7 +23,7 @@ test("anonymous data and search denied; public signup and legacy admin key disab
   for (const path of [
     "/api/categories",
     "/api/restaurants?page=1",
-    "/api/places/search?q=돈카츠",
+    "/api/places/search?q=돈카츠&bounds=%7B%22south%22%3A37%2C%22west%22%3A126%2C%22north%22%3A38%2C%22east%22%3A128%7D",
     "/api/places/mock-seongsu-cutlet",
   ]) {
     expect((await request.get(path)).status()).toBe(401);
@@ -255,6 +255,9 @@ test("mock Google search, three-group filter, map and responsive UI", async ({
     if (/googleapis|gstatic/.test(r.url())) external.push(r.url());
   });
   await page.goto("/map");
+  await page
+    .getByRole("button", { name: "모의 지도 성수로 이동", exact: true })
+    .click();
   await page.getByLabel("대표 메뉴로 찾기", { exact: true }).fill("돈카츠");
   await page.getByRole("button", { name: "검색", exact: true }).click();
   await expect(
@@ -324,7 +327,7 @@ test("atomic shared query cap includes details and returns reset time", async ({
         request.get(
           i % 2
             ? "/api/places/mock-seongsu-cutlet"
-            : "/api/places/search?q=돈카츠",
+            : "/api/places/search?q=돈카츠&bounds=%7B%22south%22%3A37%2C%22west%22%3A126%2C%22north%22%3A38%2C%22east%22%3A128%7D",
         ),
       ),
     );
@@ -338,6 +341,9 @@ test("atomic shared query cap includes details and returns reset time", async ({
     expect(Date.parse(blocked.resetAt)).toBeGreaterThan(Date.now());
     await login(page.request);
     await page.goto("/map");
+    await page
+      .getByRole("button", { name: "모의 지도 성수로 이동", exact: true })
+      .click();
     await page.getByLabel("대표 메뉴로 찾기", { exact: true }).fill("돈카츠");
     await page.getByRole("button", { name: "검색", exact: true }).click();
     await expect(

@@ -80,9 +80,15 @@ test("late automatic location response cannot replace selected restaurant", asyn
   });
   await login(page);
   await page.goto("/map");
+  await page
+    .getByRole("button", { name: "모의 지도 성수로 이동", exact: true })
+    .click();
   await page.getByLabel("대표 메뉴로 찾기", { exact: true }).fill("돈카츠");
   await page.getByRole("button", { name: "검색", exact: true }).click();
-  await page.getByRole("button", { name: /모의 돈카츠 성수점/ }).click();
+  await page
+    .locator(".candidate-row")
+    .filter({ hasText: "모의 돈카츠 성수점" })
+    .click();
   await expect(
     page.getByRole("region", { name: "모의 돈카츠 성수점 지도", exact: true }),
   ).toBeVisible();
@@ -90,6 +96,6 @@ test("late automatic location response cannot replace selected restaurant", asyn
     (window as unknown as { deliverLocation: () => void }).deliverLocation();
   });
   await expect(
-    page.getByRole("region", { name: "모의 돈카츠 성수점 지도", exact: true }),
+    page.getByRole("button", { name: "모의 돈카츠 성수점 핀", exact: true }),
   ).toHaveAttribute("data-latitude", "37.5445");
 });

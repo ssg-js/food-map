@@ -1,5 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { MockPointMap } from "./MockPointMap";
+import type { MapViewport } from "@food-map/registration";
 import { GoogleMapProvider } from "@/widgets/map/model/google-map-provider";
 export type MapPoint = {
   id: string;
@@ -7,7 +9,11 @@ export type MapPoint = {
   longitude: number;
   title: string;
 };
-type PointProps = {
+export type PointProps = {
+  onViewportChange?: (bounds: MapViewport) => void;
+  activeId?: string | null;
+  onHover?: (id: string | null) => void;
+  fitToPoints?: boolean;
   latitude: number;
   longitude: number;
   title: string;
@@ -23,6 +29,9 @@ function LivePointMap({
   points,
   onSelect,
   showMarker = true,
+  onViewportChange,
+  activeId,
+  fitToPoints = true,
 }: PointProps) {
   const container = useRef<HTMLDivElement>(null),
     provider = useRef<GoogleMapProvider | null>(null),
@@ -60,25 +69,65 @@ function LivePointMap({
     return () => window.removeEventListener("food-map-google-auth-error", fail);
   }, []);
   useEffect(() => {
-    if (!ready) return;
+    if (ready) provider.current?.panTo({ latitude, longitude });
+  }, [ready, latitude, longitude]);
+  useEffect(() => {
+    if (!ready || !provider.current) return;
     const map = provider.current;
-    if (!map) return;
-    const coordinate = { latitude, longitude };
-    map.panTo(coordinate);
-    map.clearMarkers();
-    for (const point of points || [])
-      map.addMarker({
-        id: point.id,
-        coordinate: { latitude: point.latitude, longitude: point.longitude },
-        title: point.title,
+    const markers = (points || []).map((p) => ({
+      id: p.id,
+      coordinate: { latitude: p.latitude, longitude: p.longitude },
+      title: p.title,
+    }));
+    if (!markers.length && showMarker)
+      markers.push({
+        id: "selected-place",
+        coordinate: { latitude, longitude },
+        title,
       });
-    if (!points?.length && showMarker)
-      map.updateMarker({ id: "selected-place", coordinate, title });
-    else if (points?.length)
-      map.fitPoints(
-        points.map((p) => ({ latitude: p.latitude, longitude: p.longitude })),
-      );
-  }, [ready, latitude, longitude, title, points, showMarker]);
+    const ids = new Set(markers.map((m) => m.id));
+    for (const m of map.getMarkers())
+      if (!ids.has(m.id)) map.removeMarker(m.id);
+    for (const marker of markers) map.updateMarker(marker);
+    if (fitToPoints && points?.length) map.fitPoints(points);
+    map.highlightMarker(activeId || null);
+  }, [
+    ready,
+    points,
+    showMarker,
+    title,
+    latitude,
+    longitude,
+    fitToPoints,
+    activeId,
+  ]);
+  useEffect(() => {
+    const map = provider.current;
+    if (!ready || !map || !onViewportChange) return;
+    const report = () => {
+      const b = map.getBounds();
+      if (b)
+        onViewportChange({
+          south: b.southwest.latitude,
+          west: b.southwest.longitude,
+          north: b.northeast.latitude,
+          east: b.northeast.longitude,
+        });
+    };
+    let frame = 0;
+    const changed = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(report);
+    };
+    map.on("idle", report);
+    map.on("bounds_changed", changed);
+    report();
+    return () => {
+      cancelAnimationFrame(frame);
+      map.off("idle", report);
+      map.off("bounds_changed", changed);
+    };
+  }, [ready, onViewportChange]);
   useEffect(() => {
     const map = provider.current;
     if (!ready || !map) return;
@@ -113,55 +162,7 @@ function LivePointMap({
 export function GooglePointMap(props: PointProps) {
   if (props.mode !== "live")
     return (
-      <div
-        role="region"
-        aria-label={`${props.title} 지도`}
-        data-map-status="ready"
-        data-latitude={props.latitude}
-        data-longitude={props.longitude}
-        style={{
-          position: "absolute",
-          inset: 0,
-          background:
-            "repeating-linear-gradient(35deg,#e8edf1 0px,#e8edf1 65px,white 65px,white 80px)",
-          display: "grid",
-          placeItems: "center",
-        }}
-      >
-        <div
-          style={{
-            background: "white",
-            padding: 20,
-            borderRadius: 16,
-            textAlign: "center",
-          }}
-        >
-          {props.showMarker !== false && (
-            <span style={{ color: "#3182f6", fontSize: 32 }}>●</span>
-          )}
-          <h3>{props.title}</h3>
-          <div
-            aria-label="지도 핀"
-            style={{ display: "flex", gap: 6, flexWrap: "wrap", maxWidth: 320 }}
-          >
-            {props.points?.map((p, i) => (
-              <button
-                className={`category-chip${p.title === props.title ? " is-selected" : ""}`}
-                aria-pressed={p.title === props.title}
-                key={p.id}
-                aria-label={`${p.title} 핀`}
-                onClick={() => props.onSelect?.(p.id)}
-              >
-                {i + 1}. {p.title}
-              </button>
-            ))}
-          </div>
-          <p>모의 지도 · 실제 지도가 아니에요</p>
-          <p>
-            {props.latitude.toFixed(4)}, {props.longitude.toFixed(4)}
-          </p>
-        </div>
-      </div>
+      <MockPointMap key={`${props.latitude}:${props.longitude}`} {...props} />
     );
   return <LivePointMap {...props} />;
 }

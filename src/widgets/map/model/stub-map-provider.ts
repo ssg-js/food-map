@@ -26,6 +26,7 @@ export class StubMapProvider implements IMapProvider {
     center_changed: new Set(),
     zoom_changed: new Set(),
     idle: new Set(),
+    bounds_changed: new Set(),
     click: new Set(),
     marker_click: new Set(),
   };
@@ -55,6 +56,7 @@ export class StubMapProvider implements IMapProvider {
   setCenter(center: Coordinate): void {
     this.center = center;
     this.emit("center_changed", center);
+    this.emit("bounds_changed", this.getBounds());
     this.emit("idle", this.getBounds());
   }
 
@@ -65,6 +67,7 @@ export class StubMapProvider implements IMapProvider {
   setZoom(zoom: number): void {
     this.zoom = zoom;
     this.emit("zoom_changed", zoom);
+    this.emit("bounds_changed", this.getBounds());
     this.emit("idle", this.getBounds());
   }
 
@@ -120,7 +123,10 @@ export class StubMapProvider implements IMapProvider {
     this.handlers[event].delete(handler);
   }
 
-  private emit<T extends MapEvent>(event: T, payload: MapEventPayload[T]): void {
+  private emit<T extends MapEvent>(
+    event: T,
+    payload: MapEventPayload[T],
+  ): void {
     for (const handler of this.handlers[event]) {
       handler(payload);
     }

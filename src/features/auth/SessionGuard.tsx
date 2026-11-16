@@ -6,7 +6,12 @@ export function SessionGuard() {
   const client = useQueryClient(),
     path = usePathname();
   useEffect(() => {
-    if (["/login", "/setup", "/recover"].includes(path)) return;
+    if (
+      ["/login", "/setup", "/recover", "/map-search", "/map-preview"].includes(
+        path,
+      )
+    )
+      return;
     let stopped = false;
     let previous: string | undefined;
     const verify = async () => {

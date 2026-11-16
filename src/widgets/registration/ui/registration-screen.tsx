@@ -1,13 +1,10 @@
 import { OperatorAccess } from "@/features/catalog/components/OperatorAccess";
-import { SelectedPlaceMap } from "@/features/map/components/SelectedPlaceMap";
+import { RegistrationWorkspace } from "./RegistrationWorkspace";
 import Link from "next/link";
-import { PlaceRegistrationPanel } from "@/features/place-registration/components/PlaceRegistrationPanel";
+
 import { Icon } from "@/shared/ui/icon";
 import { InstallAppButton } from "@/features/pwa/components/InstallAppButton";
 export function RegistrationScreen() {
-  const hasMapKey =
-    Boolean(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) &&
-    process.env.GOOGLE_MAPS_BROWSER_ENABLED === "true";
   return (
     <div className="food-map-app">
       <a href="#registration" className="skip-link">
@@ -28,23 +25,13 @@ export function RegistrationScreen() {
         </nav>
         <InstallAppButton />
       </header>
-      <div style={{ padding: "0 16px" }}>
+      <div className="workspace-account">
         <OperatorAccess />
       </div>
-      <main className="workspace">
-        <div style={{ display: "contents" }}>
-          <PlaceRegistrationPanel />
-        </div>
-        <section
-          className={`map-pane${hasMapKey ? "" : " map-placeholder"}`}
-          aria-label="주변 지도"
-        >
-          <SelectedPlaceMap
-            mode={process.env.EXTERNAL_API_MODE === "live" ? "live" : "mock"}
-            apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? ""}
-          />
-        </section>
-      </main>
+      <RegistrationWorkspace
+        mode={process.env.EXTERNAL_API_MODE === "live" ? "live" : "mock"}
+        mapKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""}
+      />
     </div>
   );
 }
