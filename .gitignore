@@ -52,3 +52,11 @@ apps/mobile/android/
 playwright-report/
 test-results/
 !apps/mobile/.env.example
+
+# Local cloud credentials and database backup artifacts
+/secrets/
+/backups/
+**/service-account*.json
+**/credentials.json
+*.dump
+*.sql.gz

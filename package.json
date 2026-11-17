@@ -30,18 +30,26 @@
     "search:budget": "node scripts/search-budget.mjs",
     "test:product": "node scripts/product-test-run.mjs",
     "test:integration": "node scripts/integration-test-run.mjs",
-    "db:migrate:local": "node scripts/migrate-local.mjs"
+    "db:migrate:local": "node scripts/migrate-local.mjs",
+    "check:deployment": "node scripts/check-deployment.mjs",
+    "check:deployment:production": "node scripts/check-deployment.mjs --production",
+    "build:production": "npm run check:deployment:production && npm run db:generate && npm run build",
+    "start:production": "npm run check:deployment:production && next start",
+    "db:deploy": "prisma migrate deploy",
+    "db:status": "prisma migrate status",
+    "check:mobile-release": "node scripts/check-mobile-release.mjs",
+    "mobile:export:production": "npm run check:mobile-release && npm run mobile:export"
   },
   "dependencies": {
     "@better-auth/prisma-adapter": "^1.7.23",
     "@food-map/registration": "file:packages/registration",
     "@hookform/resolvers": "^5.4.0",
+    "@next/env": "16.4.6",
     "@prisma/client": "^6.19.3",
     "@tanstack/react-query": "^5.101.0",
     "better-auth": "^1.7.23",
     "google-auth-library": "^11.3.3",
-    "next": "16.2.9",
-    "prisma": "^6.19.3",
+    "next": "16.4.6",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-hook-form": "^7.79.0",
@@ -55,7 +63,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.2.9",
+    "eslint-config-next": "16.4.6",
     "husky": "^9.1.7",
     "lint-staged": "^17.0.7",
     "msw": "^3.0.5",
@@ -63,7 +71,11 @@
     "prettier-plugin-tailwindcss": "^0.8.0",
     "tailwindcss": "^4",
     "tsx": "^4.22.4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "prisma": "^6.19.3"
   },
-  "packageManager": "pnpm@12.18.0+sha512.9d7882d5dc82147ecfc4e062aa34834e0ad0296710a1837a1115ae012127d36b7109e321ac1598a1dd0a65597681b1e99917e12ed0d749eae91187943363beb3"
+  "packageManager": "npm@10.9.2",
+  "engines": {
+    "node": ">=24 <25"
+  }
 }
