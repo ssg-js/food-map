@@ -1,0 +1,135 @@
+{
+  "checkedAt": "2026-11-17",
+  "method": "npm audit --json (all dependency groups); npm audit fix without --force; Next/eslint-config-next 16.4.6 same-major update",
+  "note": "Counts are vulnerable package nodes, not independent exploitable application vulnerabilities. No actual exploit, external scan or live Google request was performed.",
+  "root": {
+    "before": {
+      "info": 0,
+      "low": 0,
+      "moderate": 9,
+      "high": 10,
+      "critical": 1,
+      "total": 20
+    },
+    "after": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 3,
+      "critical": 0,
+      "total": 3
+    },
+    "remaining": [
+      {
+        "package": "@prisma/config",
+        "severity": "high",
+        "via": [
+          "deepmerge-ts"
+        ],
+        "fix": {
+          "name": "prisma",
+          "version": "7.10.1",
+          "isSemVerMajor": true
+        }
+      },
+      {
+        "package": "deepmerge-ts",
+        "severity": "high",
+        "via": [
+          {
+            "title": "DeepmergeTS has stack exhaustion when merging recursive object graphs",
+            "url": "https://github.com/advisories/GHSA-ggr8-5vv4-36mx",
+            "range": "<8.0.0"
+          }
+        ],
+        "fix": {
+          "name": "prisma",
+          "version": "7.10.1",
+          "isSemVerMajor": true
+        }
+      },
+      {
+        "package": "prisma",
+        "severity": "high",
+        "via": [
+          "@prisma/config"
+        ],
+        "fix": {
+          "name": "prisma",
+          "version": "7.10.1",
+          "isSemVerMajor": true
+        }
+      }
+    ]
+  },
+  "mobile": {
+    "before": {
+      "info": 0,
+      "low": 0,
+      "moderate": 8,
+      "high": 0,
+      "critical": 0,
+      "total": 8
+    },
+    "after": {
+      "info": 0,
+      "low": 0,
+      "moderate": 3,
+      "high": 0,
+      "critical": 0,
+      "total": 3
+    },
+    "remaining": [
+      {
+        "package": "@expo/fingerprint",
+        "severity": "moderate",
+        "via": [
+          "minimatch"
+        ],
+        "fix": {
+          "name": "expo",
+          "version": "52.0.49",
+          "isSemVerMajor": true
+        }
+      },
+      {
+        "package": "expo",
+        "severity": "moderate",
+        "via": [
+          "@expo/fingerprint"
+        ],
+        "fix": {
+          "name": "expo",
+          "version": "52.0.49",
+          "isSemVerMajor": true
+        }
+      },
+      {
+        "package": "minimatch",
+        "severity": "moderate",
+        "via": [
+          {
+            "title": "minimatch has potential denial of service via globparts amplification",
+            "url": "https://github.com/advisories/GHSA-g3hv-75wg-m249",
+            "range": ">=7.0.0 <11.0.1"
+          }
+        ],
+        "fix": {
+          "name": "expo",
+          "version": "52.0.49",
+          "isSemVerMajor": true
+        }
+      }
+    ]
+  },
+  "finalizedAt": "2026-11-18",
+  "rootProductionGraph": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 3,
+    "critical": 0,
+    "total": 3
+  },
+  "productionNote": "Moving Prisma CLI to devDependencies does not remove the optional peer dependency path from npm audit --omit=dev. Three High package nodes remain; no zero-vulnerability claim."
+}

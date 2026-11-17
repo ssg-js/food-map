@@ -1,0 +1,72 @@
+{
+  "startedAt": "2026-11-17",
+  "finalizedAt": "2026-11-18",
+  "baselineCommit": "fd9780c",
+  "branch": "feature/deployment-readiness-audit",
+  "checks": [
+    {
+      "name": "web lint / TypeScript",
+      "result": "passed"
+    },
+    {
+      "name": "Expo lint / TypeScript",
+      "result": "passed"
+    },
+    {
+      "name": "unit / MSW / QueryClient",
+      "result": "passed",
+      "tests": 50
+    },
+    {
+      "name": "PostgreSQL migration / concurrent and atomic quota integration",
+      "result": "passed",
+      "tests": 1
+    },
+    {
+      "name": "web product (desktop + mobile)",
+      "result": "passed",
+      "tests": 58
+    },
+    {
+      "name": "Expo UI browser renderer (phone + tablet)",
+      "result": "passed",
+      "tests": 10
+    },
+    {
+      "name": "Next 16.4.6 production build",
+      "result": "passed"
+    },
+    {
+      "name": "Expo QA web export",
+      "result": "passed"
+    },
+    {
+      "name": "Expo iOS / Android Hermes export with QA disabled and fixture HTTPS origin",
+      "result": "passed"
+    },
+    {
+      "name": "production config rejects current local-only values without logging secrets",
+      "result": "passed"
+    },
+    {
+      "name": "Canvas TypeScript",
+      "result": "passed"
+    }
+  ],
+  "notes": [
+    "Actual auth and database use separate local QA schemas; external Google is mocked.",
+    "Final web and Expo UI suites were rerun after owner-scoped query keys and identity remount changes.",
+    "The integration test initially assumed corrupt shared counters could be stored; existing DB CHECK rejected them. The test now asserts that protection.",
+    "The first new saved-map UI test fetched before sign-in completed; it now waits for the authenticated screen and verifies response status.",
+    "Node 24.22.2 / npm 10.9.2 used for final checks."
+  ],
+  "notVerified": [
+    "Live Google requests / billable usage or Cloud Console API-key restrictions / SKU quotas",
+    "Production hosting / HTTPS / IAM / firewall / DB TLS / backup restore",
+    "Actual iOS and Android devices / IPA APK signing / store submission",
+    "Final legal / operator / data retention notices",
+    "Load testing / native binary size reduction"
+  ],
+  "deploymentPerformed": false,
+  "productionDatabaseModified": false
+}

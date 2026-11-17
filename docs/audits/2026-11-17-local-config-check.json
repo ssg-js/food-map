@@ -1,0 +1,41 @@
+{
+  "profile": "production",
+  "ok": false,
+  "issues": [
+    {
+      "id": "RUNTIME_GUARD",
+      "message": "DEPLOYMENT_ENV=production으로 서버 시작 시 검증도 활성화하세요.",
+      "severity": "error"
+    },
+    {
+      "id": "AUTH_ORIGIN",
+      "message": "AUTH_BASE_URL을 운영 HTTPS origin으로 명시하세요(경로·자격증명·query 제외).",
+      "severity": "error"
+    },
+    {
+      "id": "TRUSTED_ORIGINS",
+      "message": "AUTH_TRUSTED_ORIGINS에는 운영 origin을 포함한 명시적 HTTPS origin만 허용하세요.",
+      "severity": "error"
+    },
+    {
+      "id": "DATABASE_TARGET",
+      "message": "운영 DATABASE_URL은 로컬 개발 DB와 분리된 PostgreSQL이어야 합니다.",
+      "severity": "error"
+    },
+    {
+      "id": "GOOGLE_QUOTAS",
+      "message": "Cloud Console에서 API별 키 제한과 SKU quota를 직접 확인하세요. 내부 Places 카운터는 지도 로드 비용을 제한하지 않습니다.",
+      "severity": "warning"
+    },
+    {
+      "id": "LIVE_BUDGET",
+      "message": "운영 DB의 현재 월 공유 예산과 기존 사용량은 별도로 확인해야 합니다. 이 검사는 DB나 Google에 접속하지 않습니다.",
+      "severity": "warning"
+    },
+    {
+      "id": "OPERATIONS",
+      "message": "백업 복원·DB 방화벽·프록시 HTTPS·보안 패치·정책 확정은 운영 체크리스트에서 확인하세요.",
+      "severity": "warning"
+    }
+  ]
+}

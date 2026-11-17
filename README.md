@@ -1,37 +1,43 @@
 # 맛집지도
 
-MVP 7의 장소 검색 → 카테고리 선택·생성 → 맛집 등록을 제공하는 Next.js 웹/PWA와 Expo 모바일 앱입니다. 기존 Next.js API·PostgreSQL·Prisma를 두 프론트엔드가 함께 사용합니다.
+개인 계정으로 맛집을 직접 저장하고 목적·음식 종류·대표 메뉴로 다시 찾는 Next.js 웹/PWA와 Expo 앱입니다. 공통 API 계약을 사용하고, 서버가 계정별 소유권과 Google 요청 한도를 검사합니다.
 
-## 로컬 웹
+## 실행
 
-Node 24를 사용하세요 (`.nvmrc`). 기존 서버 환경 변수는 루트 `.env`에 유지합니다.
+Node.js 24와 npm을 사용합니다. 의존성은 각 `package-lock.json`으로 관리합니다.
 
 ```bash
+nvm use # .nvmrc의 Node 24
 npm ci
 npm run db:generate
 npm run dev
 ```
 
-`http://localhost:3000`에서 등록 화면으로 이동합니다. 실기기에서 접속할 때에는 같은 네트워크의 컴퓨터 LAN 주소를 사용하세요.
-
-## 모바일 앱
+루트 `env.example`을 참고하여 로컬 `.env`를 설정합니다. 실제 값은 Git에 올리지 마세요. 기본 외부 API 모드는 mock입니다. `http://localhost:3000`에서 개인 초기 계정 설정 또는 로그인을 진행합니다. 초기 계정 설정은 서버의 `PERSONAL_SETUP_TOKEN`이 필요하며 누구나 가입하는 공개 회원가입은 제공하지 않습니다.
 
 ```bash
 npm run mobile:install
 cp apps/mobile/env.example apps/mobile/.env
-# apps/mobile/.env의 EXPO_PUBLIC_API_URL을 컴퓨터의 LAN 주소로 수정
+# EXPO_PUBLIC_API_URL을 개발 컴퓨터의 LAN origin으로 변경
 npm run mobile:start
 ```
 
-먼저 위의 Next.js 서버를 실행해야 검색·등록이 동작합니다. iOS 시뮬레이터는 `http://127.0.0.1:3000`, Android 에뮬레이터는 `http://10.0.2.2:3000`을 사용할 수 있습니다. 실기기에서는 `localhost`를 사용하지 마세요. Expo SDK 58을 지원하는 Expo Go 또는 개발 빌드가 필요합니다. 플랫폼 지도 모듈의 네이티브 구성이 바뀌면 개발 빌드를 다시 만들어야 합니다.
+웹과 앱 모두 Next API 서버가 켜져 있어야 합니다. 앱 지도는 인증된 Maps JavaScript 프레임을 WebView/iframe으로 표시합니다. 별도 Apple Maps/Android Maps SDK 키는 사용하지 않습니다. 앱 릴리스 API 주소는 HTTPS여야 하고 서버 Places 키를 앱에 복사하면 안 됩니다. 자세한 주소·빌드 설정은 [배포 가이드](docs/deployment/README.md)를 확인하세요.
 
-iOS 지도는 Apple Maps를 사용합니다. Android 실제 지도는 별도로 제한된 Maps SDK용 키를 `EXPO_PUBLIC_GOOGLE_MAPS_ANDROID_API_KEY`에 설정해야 합니다. 키가 없어도 검색·카테고리·등록 화면은 사용할 수 있고 지도는 예시 배경임을 표시합니다. 서버 전용 Places 키를 앱에 복사하지 마세요.
+## 주요 화면
 
-## PWA
+- `/map`: 현재 지도 범위에서 외부 장소 검색, 검색 핀·현재 위치, 카테고리 선택 후 직접 저장.
+- `/saved`: 내 맛집의 목적·음식 종류·대표 메뉴 필터, 지도·수정·삭제.
+- `/categories`: 내 카테고리 생성·이름/그룹 수정·삭제. 마지막 분류를 없애는 삭제는 차단.
+- `/account/security`, `/recover`: 비밀번호 변경·복구 키 발급/회전·아이디/비밀번호 복구.
+- `/admin/api-usage`: OPERATOR 계정 전용 사용량 화면. 관리자 역할도 타인의 보관함을 열 수 없습니다.
+- `/terms`, `/privacy`: 로그인 전에도 볼 수 있는 이용·데이터 안내 초안. 실제 운영자 고지는 배포 전에 확정해야 합니다.
 
-`npm run build` 후 `npm start`로 프로덕션 모드에서 확인합니다. 홈 화면 설치와 서비스 워커는 HTTPS 또는 localhost에서 동작합니다. LAN의 일반 HTTP 주소에서는 설치/위치 권한 기능이 제한될 수 있습니다. iOS Safari는 공유 → 홈 화면에 추가, Android Chrome/PC Edge는 설치 메뉴를 사용합니다.
+모든 개인 데이터 변경은 로그인 세션으로 보호하며 과거 `ADMIN_ACCESS_KEY`로 보관함 권한을 우회하지 않습니다. Google Place ID와 사용자 분류를 저장하고 이름·주소 등 외부 장소 표시 정보는 영속 캐시하지 않습니다. 위치는 전경 단발 요청이며 백그라운드 추적은 없습니다.
 
-오프라인에서는 연결 안내를 표시합니다. 검색과 저장은 온라인 기능이며 오프라인 저장 큐나 API 데이터 영구 캐시는 없습니다.
+## PWA와 오프라인
+
+`npm run build` 후 `npm start`로 로컬 프로덕션 모드를 확인합니다. 설치와 위치 권한은 HTTPS 또는 localhost에서 동작합니다. LAN HTTP에서는 제한될 수 있습니다. 오프라인에서는 연결 안내만 표시하며 개인 API·장소 데이터·저장 대기열을 영구 캐시하지 않습니다.
 
 ## 검증
 
@@ -42,38 +48,34 @@ npm test
 npm run build
 npm run mobile:lint
 npm run mobile:typecheck
-npm run mobile:export
+npm run mobile:export # iOS/Android 번들 생성; IPA/APK나 실기기 검증 아님
 ```
 
-브라우저 테스트는 실제 DB나 Google API를 변경·호출하지 않는 고정 응답을 사용합니다.
+실제 인증·소유권·동시 한도 테스트는 **로컬의 분리 DB 스키마**로 수행합니다. 외부 Google만 mock으로 바꿉니다. 운영 DB로 테스트하지 마세요.
 
 ```bash
-npx playwright install chromium
-npm run qa:build
-npm run test:e2e
-# qa:build는 지도 키를 비운 검증용 빌드입니다. 실제 지도 확인 전 npm run build를 다시 실행하세요.
+npm run test:integration
+npm run test:product
+npm run mobile:qa:export
+npm run test:mobile-ui
 ```
 
-## 구조
+## 배포 전 확인
 
-- `src/`: 기존 Next.js 웹·서버, FSD 구조 유지
-- `apps/mobile/`: 별도 Expo 앱·의존성·lockfile
-- `packages/registration/`: 공통 API 계약과 등록 컨트롤러
-- `디자인/`: 검토용 시안
-- `디자인/보관/초기-v1/`: 이전 폴더에서 가져온 참고 자료
+```bash
+npm run check:deployment # 로컬 읽기 전용 설정 검사
+npm run check:deployment:production # 클라우드 설정 검증; 아직 배포하지 않음
+```
 
-상세 결정과 검증 결과는 `docs/adr/2026-11-08-web-pwa-native-registration.md`, `docs/00_project-management/frontend-development-handoff.md`에서 확인합니다. 이 작업은 로컬 개발이며 배포하지 않습니다.
+현재 감사와 수정 내역은 [배포 준비 감사 보고서](docs/audits/2026-11-17-deployment-readiness.md), 실행·마이그레이션·키·복원 절차는 [배포 운영 가이드](docs/deployment/README.md)에 있습니다. 실제 배포/클라우드 계정 연결은 이번 개발에 포함하지 않았습니다.
 
-공통 로직 수정 후에는 앱 개발 서버를 재시작하세요. 앱 시작/export 시 공통 패키지를 자동 동기화합니다. 네이티브 화면의 브라우저 검증은 `npm run mobile:qa:export` 후 `npm run test:mobile-ui`로 실행할 수 있습니다. 이 렌더러 검증은 iOS·Android 실기기 실행을 대체하지 않습니다.
+## 구조와 기준
 
-## 저장 목록과 관리
+- `src/`: Next 웹·API, FSD 구조.
+- `apps/mobile/`: Expo 앱과 별도 lockfile.
+- `packages/registration/`: 공유 API·계정·등록·지도 계약.
+- `docs/product/`: 개인 서비스의 현재 명세와 후속 요구.
+- `docs/audits/`: 보안·설계·구현·배포 점검 근거와 잔여 항목.
+- `디자인/수정중/{웹,앱}/`: 구현/검토 시안. 사용자 확정본만 `디자인/확정/`에 둡니다.
 
-- `/saved`: 저장한 맛집 목록, 음식·목적 필터, 지도, 수정/삭제.
-- `/categories`: 공용 카테고리 이름·분류 수정 및 삭제.
-- `/admin/api-usage`: 실제 내부 사용량과 보호 설정.
-- 앱의 저장 목록·분류 관리 메뉴에서도 같은 기능을 제공한다.
-- 수정·삭제는 각 화면의 관리자 접근 키 입력으로 권한을 확인한다. 키는 `.env`의 `ADMIN_ACCESS_KEY`이며 공유/커밋하지 않는다.
-- 로컬 DB가 켜진 상태에서 `npm run test:product`는 분리 스키마와 실제 서버를 사용하고 검증 후 스키마를 정리한다. Google만 테스트 응답으로 대체한다.
-- `npm run test:integration`은 분리 스키마에서 migration·동시 한도 검증을 실행한다.
-- 실제 지도 연결은 `localhost:3000`에서 확인했다. 휴대폰 LAN 주소/다른 포트/배포 주소는 Google 키의 HTTP referrer 허용 목록에 추가해야 한다.
-- 자세한 구현 범위와 네이티브 실행 한계는 `docs/features/native-selected-map.md`와 `docs/features/saved-restaurants-and-filters.md`를 참고한다.
+공통 코드 변경 후 앱 시작/export 시 동기화합니다. 고정 지도 프레임은 메시지로 상태를 주고받으며 토큰·좌표를 URL에 넣지 않습니다. 과거 MVP·공용 관리 문서는 이력이며 현재 기준은 개인 서비스 명세와 최신 감사/인수인계입니다.
