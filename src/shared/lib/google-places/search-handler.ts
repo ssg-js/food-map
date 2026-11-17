@@ -1,6 +1,6 @@
 import { validViewport, inViewport } from "@food-map/registration";
 import { SearchBlockedError } from "./search-budget";
-const HEADERS = { "Cache-Control": "no-store, max-age=0" };
+const HEADERS = { "Cache-Control": "private, no-store, max-age=0" };
 export interface SearchDependencies {
   enabled: boolean;
   apiKey?: string;
@@ -49,7 +49,7 @@ export async function handlePlaceSearch(
       {
         method: "POST",
         cache: "no-store",
-        signal: AbortSignal.timeout(10000),
+        signal: AbortSignal.any([AbortSignal.timeout(10000), request.signal]),
         redirect: "error",
         headers: {
           "Content-Type": "application/json",

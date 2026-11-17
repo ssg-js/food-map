@@ -1,3 +1,4 @@
+import { recordAuthAttempt } from "./auth-attempt";
 import { randomBytes, createHash } from "node:crypto";
 import { hashPassword, verifyPassword } from "better-auth/crypto";
 import { prisma } from "./prisma";
@@ -8,15 +9,7 @@ export const newRecoveryKey = () =>
 export const recoveryHash = (key: string) =>
   createHash("sha256").update(key.trim().toUpperCase()).digest("hex");
 export async function throttleSecurity(scope: string) {
-  const bucket = Math.floor(Date.now() / 900000),
-    id = createHash("sha256")
-      .update(`account-security:${bucket}:${scope}`)
-      .digest("hex");
-  const row = await prisma.loginAttempt.upsert({
-    where: { id },
-    create: { id, count: 1 },
-    update: { count: { increment: 1 } },
-  });
+  const row = await recordAuthAttempt(`account-security:${scope}`);
   if (row.count > 20)
     throw new CatalogError(
       "시도가 너무 많아요. 15분 뒤 다시 시도해주세요.",

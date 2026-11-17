@@ -1,4 +1,6 @@
-import { access } from "@/shared/lib/personal-access";
+import { readJsonRequest } from "@/shared/lib/json-body";
+import { privateJson } from "@/shared/lib/private-response";
+import { access, privateHeaders } from "@/shared/lib/personal-access";
 import { prisma } from "@/shared/lib/prisma";
 import { categoryInput, versionSchema } from "@/shared/lib/catalog";
 import {
@@ -10,15 +12,17 @@ type Context = { params: Promise<{ id: string }> };
 export async function PATCH(request: Request, { params }: Context) {
   const a = await access(request);
   if (a.denied) return a.denied;
-  const b = categoryInput.safeParse(await request.json().catch(() => null));
+  const json = await readJsonRequest(request);
+  if (!json.ok) return json.response;
+  const b = categoryInput.safeParse(json.value);
   if (!b.success)
-    return Response.json(
+    return privateJson(
       { message: "이름·분류·버전을 확인해주세요." },
       { status: 400 },
     );
   const id = (await params).id;
   if (!(await prisma.category.findFirst({ where: { id, ownerId: a.user.id } })))
-    return Response.json(
+    return privateJson(
       { message: "카테고리를 찾을 수 없어요." },
       { status: 404 },
     );
@@ -38,11 +42,11 @@ export async function PATCH(request: Request, { params }: Context) {
       },
     });
     if (!result.count)
-      return Response.json(
+      return privateJson(
         { message: "다른 화면에서 변경됐어요." },
         { status: 409 },
       );
-    return Response.json(await prisma.category.findUnique({ where: { id } }));
+    return privateJson(await prisma.category.findUnique({ where: { id } }));
   } catch (e) {
     return catalogFailure(e);
   }
@@ -55,7 +59,7 @@ export async function DELETE(request: Request, { params }: Context) {
       new URL(request.url).searchParams.get("version"),
     );
   if (!v.success)
-    return Response.json({ message: "버전을 확인해주세요." }, { status: 400 });
+    return privateJson({ message: "버전을 확인해주세요." }, { status: 400 });
   try {
     await catalogTransaction(async (tx) => {
       const c = await tx.category.findFirst({
@@ -85,7 +89,7 @@ export async function DELETE(request: Request, { params }: Context) {
       }
       await tx.category.delete({ where: { id } });
     });
-    return new Response(null, { status: 204 });
+    return new Response(null, { status: 204, headers: privateHeaders });
   } catch (e) {
     return catalogFailure(e);
   }

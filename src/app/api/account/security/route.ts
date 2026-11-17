@@ -1,3 +1,4 @@
+import { readJsonRequest } from "@/shared/lib/json-body";
 import { access, privateHeaders } from "@/shared/lib/personal-access";
 import { prisma } from "@/shared/lib/prisma";
 import {
@@ -37,7 +38,9 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const a = await access(request);
   if (a.denied) return a.denied;
-  const b = schema.safeParse(await request.json().catch(() => null));
+  const json = await readJsonRequest(request);
+  if (!json.ok) return json.response;
+  const b = schema.safeParse(json.value);
   if (!b.success)
     return Response.json(
       { message: "입력 내용을 확인해주세요. 새 비밀번호는 12~128자예요." },

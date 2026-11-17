@@ -1,3 +1,4 @@
+import { readJsonRequest } from "@/shared/lib/json-body";
 import { sameOrigin } from "@/shared/lib/admin-auth";
 import { privateHeaders } from "@/shared/lib/personal-access";
 import {
@@ -30,7 +31,9 @@ export async function POST(request: Request) {
     );
   try {
     await throttleSecurity("recovery-global");
-    const b = schema.safeParse(await request.json().catch(() => null));
+    const json = await readJsonRequest(request);
+    if (!json.ok) return json.response;
+    const b = schema.safeParse(json.value);
     if (!b.success)
       return Response.json(
         { message: "복구 키와 입력 내용을 확인해주세요." },

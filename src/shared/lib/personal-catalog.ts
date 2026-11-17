@@ -1,3 +1,4 @@
+import { privateJson } from "./private-response";
 import { Prisma } from "@prisma/client";
 import { prisma } from "./prisma";
 import { catalogSelect, flattenRestaurant } from "./catalog";
@@ -82,17 +83,14 @@ export async function savePersonal(
 }
 export function catalogFailure(e: unknown) {
   if (e instanceof CatalogError)
-    return Response.json({ message: e.message }, { status: e.status });
+    return privateJson({ message: e.message }, { status: e.status });
   if (
     e instanceof Prisma.PrismaClientKnownRequestError &&
     ["P2002", "P2034"].includes(e.code)
   )
-    return Response.json(
+    return privateJson(
       { message: "다른 요청과 충돌했어요. 새로고침 후 다시 시도해주세요." },
       { status: 409 },
     );
-  return Response.json(
-    { message: "요청을 처리하지 못했어요." },
-    { status: 500 },
-  );
+  return privateJson({ message: "요청을 처리하지 못했어요." }, { status: 500 });
 }

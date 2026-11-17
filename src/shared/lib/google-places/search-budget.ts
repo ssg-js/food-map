@@ -1,4 +1,4 @@
-import type { PrismaClient } from "@prisma/client";
+import type { Prisma, PrismaClient } from "@prisma/client";
 
 export class SearchBlockedError extends Error {
   constructor(
@@ -22,58 +22,7 @@ export async function reserveSearchRequest(
   try {
     await db.$transaction(
       async (tx) => {
-        // DB time is shared across machines and uses Google's Pacific billing calendar.
-        const [clock] = await tx.$queryRaw<
-          { month: string; day: string; nextDay: Date; nextMonth: Date }[]
-        >`
-        SELECT to_char(CURRENT_TIMESTAMP AT TIME ZONE 'America/Los_Angeles', 'YYYY-MM') AS month,
-          to_char(CURRENT_TIMESTAMP AT TIME ZONE 'America/Los_Angeles', 'YYYY-MM-DD') AS day,
-          (date_trunc('day', CURRENT_TIMESTAMP AT TIME ZONE 'America/Los_Angeles') + interval '1 day') AT TIME ZONE 'America/Los_Angeles' AS "nextDay",
-          (date_trunc('month', CURRENT_TIMESTAMP AT TIME ZONE 'America/Los_Angeles') + interval '1 month') AT TIME ZONE 'America/Los_Angeles' AS "nextMonth"
-      `;
-        if (!clock) throw new Error("No database clock");
-        // Serialize only the short reservation transaction across every process.
-        // ORM operations respect Prisma's configured DB schema; network fetch is outside this lock.
-        await tx.$queryRaw`SELECT true AS locked FROM pg_advisory_xact_lock(713260091::bigint)`;
-        const budget = await tx.googleSearchBudget.findUnique({
-          where: { month: clock.month },
-        });
-        if (!budget)
-          throw new SearchBlockedError(
-            "SEARCH_BUDGET_UNCONFIGURED",
-            "이번 달 검색 사용량을 확인하고 있어요. 추가 비용을 막기 위해 검색을 잠시 중단했어요.",
-          );
-        const dayUsed = budget.day === clock.day ? budget.dailyUsed : 0;
-        if (
-          !enforceLimits ||
-          (budget.used < budget.limit &&
-            dayUsed < budget.dailyLimit &&
-            budget.limit <= 4500 &&
-            budget.dailyLimit <= 100)
-        ) {
-          await tx.googleSearchBudget.update({
-            where: { month: clock.month },
-            data: {
-              used: { increment: 1 },
-              day: clock.day,
-              dailyUsed: dayUsed + 1,
-            },
-          });
-          await tx.googleSearchDailyUsage.upsert({
-            where: { day: clock.day },
-            create: { day: clock.day, used: 1 },
-            update: { used: { increment: 1 } },
-          });
-          return;
-        }
-        const monthly = budget.used >= budget.limit;
-        throw new SearchBlockedError(
-          "SEARCH_LIMIT_REACHED",
-          monthly
-            ? "이번 달 검색 한도에 도달했어요. 추가 비용이 발생하지 않도록 검색을 중단했어요."
-            : "오늘의 검색 한도에 도달했어요. 추가 비용이 발생하지 않도록 검색을 중단했어요.",
-          (monthly ? clock.nextMonth : clock.nextDay).toISOString(),
-        );
+        await reserveSharedSearchRequest(tx, enforceLimits);
       },
       { maxWait: 5000, timeout: 10000 },
     );
@@ -85,4 +34,72 @@ export async function reserveSearchRequest(
       "검색 사용량을 확인할 수 없어 검색을 잠시 중단했어요. 잠시 후 다시 시도해주세요.",
     );
   }
+}
+
+/** Reserve within an existing transaction so all applicable caps commit together. */
+export async function reserveSharedSearchRequest(
+  tx: Prisma.TransactionClient,
+  enforceLimits = true,
+): Promise<void> {
+  // DB time is shared across machines and uses Google's Pacific billing calendar.
+  const [clock] = await tx.$queryRaw<
+    { month: string; day: string; nextDay: Date; nextMonth: Date }[]
+  >`
+  SELECT to_char(CURRENT_TIMESTAMP AT TIME ZONE 'America/Los_Angeles', 'YYYY-MM') AS month,
+    to_char(CURRENT_TIMESTAMP AT TIME ZONE 'America/Los_Angeles', 'YYYY-MM-DD') AS day,
+    (date_trunc('day', CURRENT_TIMESTAMP AT TIME ZONE 'America/Los_Angeles') + interval '1 day') AT TIME ZONE 'America/Los_Angeles' AS "nextDay",
+    (date_trunc('month', CURRENT_TIMESTAMP AT TIME ZONE 'America/Los_Angeles') + interval '1 month') AT TIME ZONE 'America/Los_Angeles' AS "nextMonth"
+`;
+  if (!clock) throw new Error("No database clock");
+  // Serialize only the short reservation transaction across every process.
+  // ORM operations respect Prisma's configured DB schema; network fetch is outside this lock.
+  await tx.$queryRaw`SELECT true AS locked FROM pg_advisory_xact_lock(713260091::bigint)`;
+  const budget = await tx.googleSearchBudget.findUnique({
+    where: { month: clock.month },
+  });
+  if (!budget)
+    throw new SearchBlockedError(
+      "SEARCH_BUDGET_UNCONFIGURED",
+      "이번 달 검색 사용량을 확인하고 있어요. 추가 비용을 막기 위해 검색을 잠시 중단했어요.",
+    );
+  if (
+    ![budget.used, budget.dailyUsed, budget.limit, budget.dailyLimit].every(
+      (n) => Number.isSafeInteger(n) && n >= 0,
+    )
+  )
+    throw new SearchBlockedError(
+      "SEARCH_BUDGET_UNCONFIGURED",
+      "검색 사용량 설정을 확인해주세요.",
+    );
+  const dayUsed = budget.day === clock.day ? budget.dailyUsed : 0;
+  if (
+    !enforceLimits ||
+    (budget.used < budget.limit &&
+      dayUsed < budget.dailyLimit &&
+      budget.limit <= 4500 &&
+      budget.dailyLimit <= 100)
+  ) {
+    await tx.googleSearchBudget.update({
+      where: { month: clock.month },
+      data: {
+        used: { increment: 1 },
+        day: clock.day,
+        dailyUsed: dayUsed + 1,
+      },
+    });
+    await tx.googleSearchDailyUsage.upsert({
+      where: { day: clock.day },
+      create: { day: clock.day, used: 1 },
+      update: { used: { increment: 1 } },
+    });
+    return;
+  }
+  const monthly = budget.used >= budget.limit;
+  throw new SearchBlockedError(
+    "SEARCH_LIMIT_REACHED",
+    monthly
+      ? "이번 달 검색 한도에 도달했어요. 추가 비용이 발생하지 않도록 검색을 중단했어요."
+      : "오늘의 검색 한도에 도달했어요. 추가 비용이 발생하지 않도록 검색을 중단했어요.",
+    (monthly ? clock.nextMonth : clock.nextDay).toISOString(),
+  );
 }

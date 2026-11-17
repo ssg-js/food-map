@@ -1,3 +1,5 @@
+import { readJsonRequest } from "@/shared/lib/json-body";
+import { privateJson } from "@/shared/lib/private-response";
 import { timingSafeEqual } from "node:crypto";
 import { auth } from "@/shared/lib/auth";
 import { prisma } from "@/shared/lib/prisma";
@@ -17,18 +19,20 @@ const schema = z
   });
 export async function POST(request: Request) {
   if (!process.env.BETTER_AUTH_SECRET)
-    return Response.json(
+    return privateJson(
       { message: "인증 서버 설정이 필요해요." },
       { status: 503 },
     );
   if (!sameOrigin(request))
-    return Response.json(
+    return privateJson(
       { message: "허용되지 않은 요청이에요." },
       { status: 403 },
     );
-  const b = schema.safeParse(await request.json().catch(() => null));
+  const json = await readJsonRequest(request);
+  if (!json.ok) return json.response;
+  const b = schema.safeParse(json.value);
   if (!b.success)
-    return Response.json(
+    return privateJson(
       {
         message: b.error.issues.some(
           (issue) => issue.path[0] === "passwordConfirmation",
@@ -44,12 +48,12 @@ export async function POST(request: Request) {
     Buffer.byteLength(b.data.token) !== Buffer.byteLength(secret) ||
     !timingSafeEqual(Buffer.from(b.data.token), Buffer.from(secret))
   )
-    return Response.json(
+    return privateJson(
       { message: "설정 토큰과 입력 내용을 확인해주세요." },
       { status: 400 },
     );
   if (await prisma.user.count({ where: { role: { not: "QUARANTINED" } } }))
-    return Response.json(
+    return privateJson(
       { message: "이미 계정 설정이 완료됐어요." },
       { status: 409 },
     );
@@ -58,7 +62,7 @@ export async function POST(request: Request) {
     data: { state: "CLAIMED" },
   });
   if (!claimed.count)
-    return Response.json(
+    return privateJson(
       { message: "이미 설정 중이거나 완료됐어요." },
       { status: 409 },
     );
@@ -102,7 +106,7 @@ export async function POST(request: Request) {
         data: { state: "DONE" },
       });
     });
-    return Response.json({ ok: true }, { status: 201 });
+    return privateJson({ ok: true }, { status: 201 });
   } catch {
     if (createdId)
       await prisma.user.deleteMany({
@@ -113,7 +117,7 @@ export async function POST(request: Request) {
         where: { id: "personal" },
         data: { state: "READY" },
       });
-    return Response.json(
+    return privateJson(
       { message: "계정 설정을 완료하지 못했어요. 서버 상태를 확인해주세요." },
       { status: 500 },
     );

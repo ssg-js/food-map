@@ -1,4 +1,6 @@
-import { createHash } from "node:crypto";
+import { readJsonRequest } from "@/shared/lib/json-body";
+import { privateJson } from "@/shared/lib/private-response";
+import { recordAuthAttempt } from "@/shared/lib/auth-attempt";
 import { auth } from "@/shared/lib/auth";
 import { prisma } from "@/shared/lib/prisma";
 import { sameOrigin } from "@/shared/lib/admin-auth";
@@ -10,7 +12,7 @@ const schema = z.object({
 });
 export async function POST(request: Request) {
   if (!process.env.BETTER_AUTH_SECRET)
-    return Response.json(
+    return privateJson(
       { message: "인증 서버 설정이 필요해요." },
       { status: 503 },
     );
@@ -18,31 +20,27 @@ export async function POST(request: Request) {
     !sameOrigin(request) &&
     request.headers.get("x-food-map-client") !== "native"
   )
-    return Response.json(
+    return privateJson(
       { message: "허용되지 않은 요청이에요." },
       { status: 403 },
     );
-  const body = schema.safeParse(await request.json().catch(() => null));
+  const json = await readJsonRequest(request);
+  if (!json.ok) return json.response;
+  const body = schema.safeParse(json.value);
   if (!body.success)
-    return Response.json(
+    return privateJson(
       { message: "아이디와 비밀번호를 확인해주세요." },
       { status: 400, headers: privateHeaders },
     );
-  const bucket = Math.floor(Date.now() / 900000);
-  const id = createHash("sha256")
-    .update(`${bucket}:${body.data.username.toLowerCase()}`)
-    .digest("hex");
-  const attempt = await prisma.loginAttempt.upsert({
-    where: { id },
-    create: { id, count: 1 },
-    update: { count: { increment: 1 } },
-  });
-  if (attempt.count > 10)
-    return Response.json(
+  // A shared persisted cap bounds password hashing even when usernames are rotated.
+  const globalAttempt = await recordAuthAttempt("login-global");
+  if (globalAttempt.count > 100)
+    return privateJson(
       { message: "시도가 너무 많아요. 15분 뒤 다시 시도해주세요." },
-      { status: 429, headers: privateHeaders },
+      { status: 429 },
     );
-  // An in-flight sign-in using the old password must not survive a password reset.
+  // Only real credentials receive per-account rows; arbitrary names cannot grow storage.
+  // Better Auth still performs its dummy password hash for nonexistent users.
   const credentialBefore = await prisma.account.findFirst({
     where: {
       providerId: "credential",
@@ -50,6 +48,16 @@ export async function POST(request: Request) {
     },
     select: { id: true, password: true },
   });
+  const attempt = credentialBefore
+    ? await recordAuthAttempt(`login:${credentialBefore.id}`)
+    : null;
+  const id = attempt?.id;
+  if (attempt && attempt.count > 10)
+    return privateJson(
+      { message: "시도가 너무 많아요. 15분 뒤 다시 시도해주세요." },
+      { status: 429, headers: privateHeaders },
+    );
+  // An in-flight sign-in using the old password must not survive a password reset.
   const response = await auth.api.signInUsername({
     body: body.data,
     headers: request.headers,
@@ -57,7 +65,7 @@ export async function POST(request: Request) {
   });
   const result = await response.json();
   if (!response.ok)
-    return Response.json(
+    return privateJson(
       { message: "아이디와 비밀번호를 확인해주세요." },
       { status: 401, headers: privateHeaders },
     );
@@ -75,16 +83,16 @@ export async function POST(request: Request) {
   ) {
     if (typeof token === "string")
       await prisma.session.deleteMany({ where: { token } });
-    return Response.json(
+    return privateJson(
       { message: "계정 정보가 변경됐어요. 새 비밀번호로 다시 로그인해주세요." },
       { status: 401, headers: privateHeaders },
     );
   }
-  await prisma.loginAttempt.deleteMany({ where: { id } });
+  if (id) await prisma.loginAttempt.deleteMany({ where: { id } });
   const h = new Headers(privateHeaders);
   for (const cookie of response.headers.getSetCookie())
     h.append("set-cookie", cookie);
-  return Response.json(
+  return privateJson(
     request.headers.get("x-food-map-client") === "native"
       ? { ok: true, token }
       : { ok: true },

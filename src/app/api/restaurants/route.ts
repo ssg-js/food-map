@@ -1,3 +1,5 @@
+import { readJsonRequest } from "@/shared/lib/json-body";
+import { privateJson } from "@/shared/lib/private-response";
 import { access, privateHeaders } from "@/shared/lib/personal-access";
 import { prisma } from "@/shared/lib/prisma";
 import {
@@ -25,7 +27,7 @@ export async function GET(request: Request) {
       where: { ownerId, googlePlaceId: placeId },
       select: catalogSelect,
     });
-    return Response.json(row ? flattenRestaurant(row) : null, {
+    return privateJson(row ? flattenRestaurant(row) : null, {
       headers: privateHeaders,
     });
   }
@@ -34,21 +36,23 @@ export async function GET(request: Request) {
     take: 200,
     select: catalogSelect,
   });
-  return Response.json(rows.map(flattenRestaurant), {
+  return privateJson(rows.map(flattenRestaurant), {
     headers: privateHeaders,
   });
 }
 export async function POST(request: Request) {
   const a = await access(request);
   if (a.denied) return a.denied;
-  const b = schema.safeParse(await request.json().catch(() => null));
+  const json = await readJsonRequest(request);
+  if (!json.ok) return json.response;
+  const b = schema.safeParse(json.value);
   if (!b.success)
-    return Response.json(
+    return privateJson(
       { message: "장소와 카테고리를 확인해주세요." },
       { status: 400 },
     );
   try {
-    return Response.json(
+    return privateJson(
       await savePersonal(
         a.user.id,
         b.data.googlePlaceId,

@@ -1,3 +1,4 @@
+import { privateJson } from "./private-response";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "./prisma";
@@ -37,11 +38,11 @@ export function apiError(error: unknown) {
     error instanceof Prisma.PrismaClientKnownRequestError &&
     error.code === "P2002"
   )
-    return Response.json(
+    return privateJson(
       { message: "같은 분류에 이미 있는 카테고리 이름이에요." },
       { status: 409 },
     );
-  return Response.json(
+  return privateJson(
     { message: "요청을 처리하지 못했어요. 잠시 후 다시 시도해주세요." },
     { status: 500 },
   );
@@ -50,10 +51,7 @@ export async function listCatalog(url: URL, ownerId: string) {
   const page = Number(url.searchParams.get("page") || 1),
     pageSize = 12;
   if (!Number.isSafeInteger(page) || page < 1 || page > 100000)
-    return Response.json(
-      { message: "페이지를 확인해주세요." },
-      { status: 400 },
-    );
+    return privateJson({ message: "페이지를 확인해주세요." }, { status: 400 });
   const groups = [
     ["food", "FOOD"],
     ["purpose", "PURPOSE"],
@@ -64,7 +62,7 @@ export async function listCatalog(url: URL, ownerId: string) {
     kind,
   }));
   if (filters.reduce((n, f) => n + f.ids.length, 0) > 100)
-    return Response.json({ message: "필터가 너무 많아요." }, { status: 400 });
+    return privateJson({ message: "필터가 너무 많아요." }, { status: 400 });
   const q = (url.searchParams.get("q") || "").trim().slice(0, 100);
   const where: Prisma.RestaurantWhereInput = {
     ownerId,
@@ -102,7 +100,7 @@ export async function listCatalog(url: URL, ownerId: string) {
     }),
     prisma.restaurant.count({ where }),
   ]);
-  return Response.json(
+  return privateJson(
     { items: rows.map(flattenRestaurant), total, page, pageSize },
     { headers: { "Cache-Control": "private, no-store" } },
   );

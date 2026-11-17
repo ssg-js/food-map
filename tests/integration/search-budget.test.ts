@@ -6,6 +6,7 @@ import {
   reserveSearchRequest,
   SearchBlockedError,
 } from "../../src/shared/lib/google-places/search-budget";
+import { reservePersonalRequest } from "../../src/shared/lib/google-places/personal-budget";
 const url = process.env.TEST_DATABASE_URL;
 test(
   "PostgreSQL migration, persistence and concurrent budget enforcement",
@@ -210,6 +211,148 @@ test(
         ).dailyUsed,
         1,
       );
+      // Shared and personal reservations must commit or roll back as one unit.
+      const originalEnv = {
+        mode: process.env.EXTERNAL_API_MODE,
+        daily: process.env.API_DAILY_LIMIT,
+        monthly: process.env.API_MONTHLY_LIMIT,
+      };
+      try {
+        process.env.EXTERNAL_API_MODE = "live";
+        process.env.API_DAILY_LIMIT = "1";
+        process.env.API_MONTHLY_LIMIT = "100";
+        await db.googleSearchBudget.update({
+          where: { month: clock.month },
+          data: {
+            used: 0,
+            limit: 100,
+            day: clock.day,
+            dailyUsed: 0,
+            dailyLimit: 100,
+          },
+        });
+        await reservePersonalRequest("other", "SEARCH", db);
+        await assert.rejects(
+          reservePersonalRequest("other", "DETAILS", db),
+          (e: unknown) =>
+            e instanceof SearchBlockedError &&
+            e.code === "SEARCH_LIMIT_REACHED",
+        );
+        assert.equal(
+          (
+            await db.googleSearchBudget.findUniqueOrThrow({
+              where: { month: clock.month },
+            })
+          ).used,
+          1,
+        );
+        assert.equal(
+          (
+            await db.apiUsage.findUniqueOrThrow({
+              where: { id: `live:ALL:global:${clock.day}` },
+            })
+          ).count,
+          1,
+        );
+        assert.equal(await db.apiUsage.count({ where: { api: "DETAILS" } }), 0);
+        // Rejecting the shared cap also rolls back all personal counter writes.
+        process.env.API_DAILY_LIMIT = "100";
+        await db.googleSearchBudget.update({
+          where: { month: clock.month },
+          data: { used: 100 },
+        });
+        const before = await db.apiUsage.findMany({ orderBy: { id: "asc" } });
+        await assert.rejects(reservePersonalRequest("other", "DETAILS", db));
+        assert.deepEqual(
+          await db.apiUsage.findMany({ orderBy: { id: "asc" } }),
+          before,
+        );
+        // Concurrent personal calls must not exceed either cap.
+        await db.apiUsage.deleteMany();
+        process.env.API_DAILY_LIMIT = "2";
+        await db.googleSearchBudget.update({
+          where: { month: clock.month },
+          data: { used: 0, dailyUsed: 0 },
+        });
+        const personal = await Promise.allSettled(
+          Array.from({ length: 8 }, () =>
+            reservePersonalRequest("other", "SEARCH", db),
+          ),
+        );
+        assert.equal(
+          personal.filter((r) => r.status === "fulfilled").length,
+          2,
+        );
+        assert.equal(
+          (
+            await db.googleSearchBudget.findUniqueOrThrow({
+              where: { month: clock.month },
+            })
+          ).used,
+          2,
+        );
+        assert.equal(
+          (
+            await db.apiUsage.findUniqueOrThrow({
+              where: { id: `live:ALL:global:${clock.day}` },
+            })
+          ).count,
+          2,
+        );
+        // Existing shared-budget CHECK constraints reject corruption at the DB boundary.
+        await assert.rejects(
+          db.googleSearchBudget.update({
+            where: { month: clock.month },
+            data: { used: -1 },
+          }),
+        );
+        assert.equal(
+          (
+            await db.googleSearchBudget.findUniqueOrThrow({
+              where: { month: clock.month },
+            })
+          ).used,
+          2,
+        );
+        // ApiUsage has no non-negative CHECK; application validation must fail closed.
+        const dailyId = `live:ALL:global:${clock.day}`;
+        await db.apiUsage.update({
+          where: { id: dailyId },
+          data: { count: -1 },
+        });
+        await assert.rejects(
+          reservePersonalRequest("other", "SEARCH", db),
+          (e: unknown) =>
+            e instanceof SearchBlockedError &&
+            e.code === "SEARCH_BUDGET_UNCONFIGURED",
+        );
+        assert.equal(
+          (await db.apiUsage.findUniqueOrThrow({ where: { id: dailyId } }))
+            .count,
+          -1,
+        );
+        assert.equal(
+          (
+            await db.googleSearchBudget.findUniqueOrThrow({
+              where: { month: clock.month },
+            })
+          ).used,
+          2,
+        );
+        await db.apiUsage.update({
+          where: { id: dailyId },
+          data: { count: 2 },
+        });
+      } finally {
+        for (const [key, value] of [
+          ["EXTERNAL_API_MODE", originalEnv.mode],
+          ["API_DAILY_LIMIT", originalEnv.daily],
+          ["API_MONTHLY_LIMIT", originalEnv.monthly],
+        ] as const) {
+          if (value === undefined) delete process.env[key];
+          else process.env[key] = value;
+        }
+      }
       await db.googleSearchBudget.delete({ where: { month: clock.month } });
       await db.googleSearchBudget.create({
         data: { month: "1999-01", used: 0, limit: 4500 },

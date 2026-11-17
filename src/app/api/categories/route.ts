@@ -1,3 +1,5 @@
+import { readJsonRequest } from "@/shared/lib/json-body";
+import { privateJson } from "@/shared/lib/private-response";
 import { access, privateHeaders } from "@/shared/lib/personal-access";
 import { prisma } from "@/shared/lib/prisma";
 import { categoryInput } from "@/shared/lib/catalog";
@@ -5,7 +7,7 @@ import { catalogFailure } from "@/shared/lib/personal-catalog";
 export async function GET(request: Request) {
   const a = await access(request);
   if (a.denied) return a.denied;
-  return Response.json(
+  return privateJson(
     {
       items: await prisma.category.findMany({
         where: { ownerId: a.user.id },
@@ -25,16 +27,18 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const a = await access(request);
   if (a.denied) return a.denied;
+  const json = await readJsonRequest(request);
+  if (!json.ok) return json.response;
   const b = categoryInput
     .omit({ expectedUpdatedAt: true })
-    .safeParse(await request.json().catch(() => null));
+    .safeParse(json.value);
   if (!b.success)
-    return Response.json(
+    return privateJson(
       { message: "1~20자 이름과 분류를 확인해주세요." },
       { status: 400 },
     );
   try {
-    return Response.json(
+    return privateJson(
       await prisma.category.create({ data: { ...b.data, ownerId: a.user.id } }),
       { status: 201 },
     );

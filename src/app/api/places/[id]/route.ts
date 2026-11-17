@@ -1,3 +1,4 @@
+import { privateJson } from "@/shared/lib/private-response";
 import { externalMode, placesFetch } from "@/shared/lib/google-places/provider";
 import { access } from "@/shared/lib/personal-access";
 import { reservePersonalRequest } from "@/shared/lib/google-places/personal-budget";
@@ -11,7 +12,7 @@ export async function GET(
   const { id } = await params;
   const headers = { "Cache-Control": "no-store" };
   if (!id.trim() || id.length > 512)
-    return Response.json(
+    return privateJson(
       { message: "장소 ID를 확인해주세요." },
       { status: 400, headers },
     );
@@ -20,7 +21,7 @@ export async function GET(
     (process.env.GOOGLE_PLACES_ENABLED !== "true" ||
       !process.env.GOOGLE_PLACES_API_KEY)
   )
-    return Response.json(
+    return privateJson(
       { message: "장소 정보 조회를 준비 중이에요." },
       { status: 503, headers },
     );
@@ -44,12 +45,12 @@ export async function GET(
       },
     });
     if (response.status === 404)
-      return Response.json(
+      return privateJson(
         { message: "장소 정보가 변경되었거나 더 이상 제공되지 않아요." },
         { status: 404, headers },
       );
     if (!response.ok)
-      return Response.json(
+      return privateJson(
         { message: "장소 정보를 가져오지 못했어요." },
         { status: response.status === 429 ? 429 : 502, headers },
       );
@@ -60,7 +61,7 @@ export async function GET(
       typeof p.formattedAddress !== "string"
     )
       throw new Error("invalid place");
-    return Response.json(
+    return privateJson(
       {
         placeId: p.id,
         name: p.displayName.text,
@@ -71,7 +72,7 @@ export async function GET(
       { headers },
     );
   } catch (e) {
-    return Response.json(
+    return privateJson(
       {
         message:
           e instanceof SearchBlockedError

@@ -2,9 +2,8 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { currentUser } from "./auth";
 import { sameOrigin } from "./admin-auth";
-export const privateHeaders = {
-  "Cache-Control": "private, no-store, max-age=0",
-};
+import { privateHeaders } from "./private-response";
+export { privateHeaders } from "./private-response";
 export async function access(request: Request) {
   const user = await currentUser(request.headers);
   if (!user)
