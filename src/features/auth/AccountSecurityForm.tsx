@@ -1,4 +1,6 @@
 "use client";
+import { ServicePolicyLinks } from "@/features/legal/components/ServicePolicy";
+import { notifySessionChanged } from "@/features/auth/model/session-change";
 import { useState, useEffect } from "react";
 import { createAccountApi } from "@food-map/registration";
 const api = createAccountApi();
@@ -69,8 +71,7 @@ export function AccountSecurityForm({
         setNotice(
           "비밀번호를 변경했어요. 모든 기기에서 로그아웃됐어요. 다시 로그인한 뒤 새 복구 키를 발급해주세요.",
         );
-        if (kind === "change")
-          localStorage.setItem("food-map-session", String(Date.now()));
+        if (kind === "change") notifySessionChanged();
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "요청을 처리하지 못했어요.");
@@ -222,6 +223,7 @@ export function AccountSecurityForm({
             비밀번호와 복구 키를 모두 잃었다면 이 화면으로 복구할 수 없어요.
           </p>
         )}
+        <ServicePolicyLinks />
       </section>
     </main>
   );

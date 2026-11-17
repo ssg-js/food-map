@@ -5,6 +5,6 @@ export const metadata = {
   robots: { index: false, follow: false },
 };
 export default async function Security() {
-  await requirePageUser();
-  return <AccountSecurityForm />;
+  const user = await requirePageUser();
+  return <AccountSecurityForm key={user.id} />;
 }

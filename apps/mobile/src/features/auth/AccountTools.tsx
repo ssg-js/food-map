@@ -1,3 +1,4 @@
+import { ServicePolicyLinks } from "../legal/ServicePolicyLinks";
 import { useState } from "react";
 import { ScrollView, View, Text, TextInput } from "react-native";
 import { createAccountApi } from "@food-map/registration";
@@ -173,6 +174,7 @@ export function AccountTools({
           else onClose();
         }}
       />
+      <ServicePolicyLinks />
     </ScrollView>
   );
 }

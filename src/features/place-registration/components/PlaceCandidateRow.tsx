@@ -12,20 +12,36 @@ export function PlaceCandidateRow({
   onSelect: () => void;
 }) {
   return (
-    <button
-      type="button"
-      className={`candidate-row${selected ? " is-selected" : ""}`}
-      aria-pressed={selected}
-      disabled={disabled}
-      onClick={onSelect}
-    >
-      <span className="candidate-copy">
-        <span className="candidate-name">{place.name}</span>
-        <span className="candidate-address">{place.address}</span>
-      </span>
-      <span className="candidate-check">
-        {selected && <Icon name="check" width={16} height={16} />}
-      </span>
-    </button>
+    <>
+      <button
+        type="button"
+        className={`candidate-row${selected ? " is-selected" : ""}`}
+        aria-pressed={selected}
+        disabled={disabled}
+        onClick={onSelect}
+      >
+        <span className="candidate-copy">
+          <span className="candidate-name">{place.name}</span>
+          <span className="candidate-address">{place.address}</span>
+        </span>
+        <span className="candidate-check">
+          {selected && <Icon name="check" width={16} height={16} />}
+        </span>
+      </button>
+      {place.attributions?.map((a, index) => (
+        <p
+          className="provider-credit"
+          key={`${a.providerUri ?? a.provider}-${index}`}
+        >
+          {a.providerUri?.startsWith("https://") ? (
+            <a href={a.providerUri} target="_blank" rel="noopener noreferrer">
+              {a.provider || "장소 정보 제공"}
+            </a>
+          ) : (
+            a.provider
+          )}
+        </p>
+      ))}
+    </>
   );
 }

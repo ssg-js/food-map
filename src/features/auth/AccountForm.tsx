@@ -1,4 +1,5 @@
 "use client";
+import { ServicePolicyLinks } from "@/features/legal/components/ServicePolicy";
 import { useState } from "react";
 export function AccountForm({ setup = false }: { setup?: boolean }) {
   const [error, setError] = useState(""),
@@ -21,11 +22,15 @@ export function AccountForm({ setup = false }: { setup?: boolean }) {
             return;
           }
           setBusy(true);
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 20_000);
           try {
             const r = await fetch(
               setup ? "/api/auth/setup" : "/api/auth/login",
               {
                 method: "POST",
+                signal: controller.signal,
+                cache: "no-store",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                   username: f.get("username"),
@@ -38,12 +43,26 @@ export function AccountForm({ setup = false }: { setup?: boolean }) {
                 }),
               },
             );
-            const b = await r.json();
-            if (!r.ok) throw new Error(b.message);
+            const b = await r.json().catch(() => null);
+            if (!r.ok)
+              throw new Error(
+                typeof b?.message === "string"
+                  ? b.message
+                  : "로그인 요청에 실패했어요. 잠시 후 다시 시도해주세요.",
+              );
             window.location.replace(setup ? "/login" : "/map");
           } catch (e) {
-            setError(e instanceof Error ? e.message : "연결을 확인해주세요.");
+            setError(
+              controller.signal.aborted
+                ? "응답이 늦어지고 있어요. 연결을 확인하고 다시 시도해주세요."
+                : e instanceof TypeError
+                  ? "서버에 연결하지 못했어요. 네트워크를 확인해주세요."
+                  : e instanceof Error
+                    ? e.message
+                    : "연결을 확인해주세요.",
+            );
           } finally {
+            clearTimeout(timeout);
             setBusy(false);
           }
         }}
@@ -115,6 +134,7 @@ export function AccountForm({ setup = false }: { setup?: boolean }) {
         </button>
         {!setup && <a href="/recover">아이디·비밀번호 찾기</a>}
         <p>내가 저장한 맛집과 카테고리를 안전하게 보관해요.</p>
+        <ServicePolicyLinks />
       </form>
     </main>
   );

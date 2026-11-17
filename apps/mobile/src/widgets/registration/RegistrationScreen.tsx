@@ -1,3 +1,4 @@
+import { usePersonalAuth } from "../../features/auth/AuthGate";
 import { OperatorAccess } from "../../features/catalog/OperatorAccess";
 import { Link } from "expo-router";
 import { useRef, type ComponentRef } from "react";
@@ -47,31 +48,51 @@ function Candidate({
   onHighlight: (id: string | null) => void;
 }) {
   return (
-    <Pressable
-      onPress={onPress}
-      onHoverIn={() => onHighlight(place.placeId)}
-      onHoverOut={() => onHighlight(null)}
-      onFocus={() => onHighlight(place.placeId)}
-      onBlur={() => onHighlight(null)}
-      disabled={disabled}
-      accessibilityRole="button"
-      accessibilityState={{ selected, disabled }}
-      aria-selected={selected}
-      accessibilityLabel={`${place.name}, ${place.address}${selected ? ", 선택됨" : ""}`}
-      style={({ pressed }) => [
-        s.candidate,
-        selected && s.candidateSelected,
-        pressed && s.pressed,
-      ]}
-    >
-      <View style={[s.checkCircle, selected && s.checkCircleSelected]}>
-        {selected && <Text style={s.checkText}>✓</Text>}
-      </View>
-      <View style={s.candidateCopy}>
-        <Text style={s.candidateName}>{place.name}</Text>
-        <Text style={s.candidateAddress}>{place.address}</Text>
-      </View>
-    </Pressable>
+    <>
+      <Pressable
+        onPress={onPress}
+        onHoverIn={() => onHighlight(place.placeId)}
+        onHoverOut={() => onHighlight(null)}
+        onFocus={() => onHighlight(place.placeId)}
+        onBlur={() => onHighlight(null)}
+        disabled={disabled}
+        accessibilityRole="button"
+        accessibilityState={{ selected, disabled }}
+        aria-selected={selected}
+        accessibilityLabel={`${place.name}, ${place.address}${selected ? ", 선택됨" : ""}`}
+        style={({ pressed }) => [
+          s.candidate,
+          selected && s.candidateSelected,
+          pressed && s.pressed,
+        ]}
+      >
+        <View style={[s.checkCircle, selected && s.checkCircleSelected]}>
+          {selected && <Text style={s.checkText}>✓</Text>}
+        </View>
+        <View style={s.candidateCopy}>
+          <Text style={s.candidateName}>{place.name}</Text>
+          <Text style={s.candidateAddress}>{place.address}</Text>
+        </View>
+      </Pressable>
+      {place.attributions?.map((a, index) => (
+        <Text
+          key={`${a.providerUri ?? a.provider}-${index}`}
+          style={s.help}
+          accessibilityRole={
+            a.providerUri?.startsWith("https://") ? "link" : "text"
+          }
+          onPress={
+            a.providerUri?.startsWith("https://")
+              ? () => {
+                  void Linking.openURL(a.providerUri!);
+                }
+              : undefined
+          }
+        >
+          {a.provider || "장소 정보 제공"}
+        </Text>
+      ))}
+    </>
   );
 }
 function CategoryGroups({ flow }: { flow: RegistrationController }) {
@@ -166,7 +187,8 @@ function CategoryGroups({ flow }: { flow: RegistrationController }) {
   );
 }
 export function RegistrationScreen() {
-  const flow = useRegistration(api);
+  const { ownerId } = usePersonalAuth();
+  const flow = useRegistration(api, ownerId);
   const insets = useSafeAreaInsets();
   const search = useRef<ComponentRef<typeof TextInput>>(null);
   const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
@@ -382,7 +404,14 @@ export function RegistrationScreen() {
                       ))}
                     </View>
                   )}
-                  <Text style={s.credit}>장소 검색 제공 Google Maps</Text>
+                  <Text
+                    style={[
+                      s.credit,
+                      { fontSize: 14, fontWeight: "400", color: "#4e5968" },
+                    ]}
+                  >
+                    장소 검색 제공 Google Maps
+                  </Text>
                 </View>
               )}
             {flow.selectedPlace && (

@@ -1,9 +1,10 @@
 import { Platform } from "react-native";
 import { createRegistrationApi } from "@food-map/registration";
-const configured = process.env.EXPO_PUBLIC_API_URL?.trim();
-export const apiBaseUrl =
-  configured ||
-  (Platform.OS === "android"
-    ? "http://10.0.2.2:3000"
-    : "http://127.0.0.1:3000");
+import { resolveApiOrigin } from "./api-origin";
+export const apiBaseUrl = resolveApiOrigin(
+  process.env.EXPO_PUBLIC_API_URL,
+  Platform.OS,
+  __DEV__,
+  process.env.EXPO_PUBLIC_LOCAL_QA === "true",
+);
 export const api = createRegistrationApi(apiBaseUrl);

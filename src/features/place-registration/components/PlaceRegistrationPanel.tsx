@@ -196,7 +196,10 @@ export function PlaceRegistrationPanel({
                 </ul>
               )}
               <p className="provider-credit">
-                장소 검색 제공 <strong>Google Maps</strong>
+                장소 검색 제공{" "}
+                <span className="google-maps-credit" translate="no">
+                  Google Maps
+                </span>
               </p>
             </>
           )}

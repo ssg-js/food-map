@@ -4,7 +4,7 @@ import { PwaRuntime } from "@/features/pwa/components/PwaRuntime";
 import "./globals.css";
 export const metadata: Metadata = {
   title: "맛집지도 · 발견한 맛집을 카테고리로",
-  description: "장소를 검색하고, 함께 쓰는 카테고리로 맛집을 정리하세요.",
+  description: "장소를 검색하고, 나만의 카테고리로 맛집을 정리하세요.",
   applicationName: "맛집지도",
   appleWebApp: { capable: true, statusBarStyle: "default", title: "맛집지도" },
   icons: {

@@ -18,7 +18,10 @@ createServer(async (request, response) => {
     request.url.startsWith("/api/") ||
     request.url.startsWith("/_next/") ||
     request.url.startsWith("/map-preview") ||
-    request.url.startsWith("/map-search")
+    request.url.startsWith("/map-search") ||
+    ["/terms", "/privacy"].includes(
+      new URL(request.url, "http://127.0.0.1").pathname,
+    )
   ) {
     const headers = { ...request.headers, host: "127.0.0.1:3300" };
     if (headers.origin) headers.origin = "http://127.0.0.1:3300";

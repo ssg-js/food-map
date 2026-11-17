@@ -1,7 +1,9 @@
+import { ServicePolicyLinks } from "../legal/ServicePolicyLinks";
 import { AccountTools } from "./AccountTools";
 import {
   createContext,
   useContext,
+  useRef,
   useEffect,
   useState,
   type ReactNode,
@@ -20,6 +22,7 @@ import { setSessionToken } from "@food-map/registration";
 import { catalogApi as api } from "../catalog/api";
 import { ActionButton, Feedback } from "../../shared/ui";
 const Context = createContext({
+  ownerId: "",
   logout: async () => {},
   clearSession: async () => {},
 });
@@ -44,19 +47,42 @@ export function AuthGate({ children }: { children: ReactNode }) {
     [password, setPassword] = useState(""),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
+  const currentUser = useRef<string | null>(null);
+  const sessionVersion = useRef(0);
   const clear = async () => {
+    sessionVersion.current++;
     setSessionToken("");
-    await storeToken("");
+    currentUser.current = null;
     c.clear();
     setUser(null);
+    await storeToken("");
   };
   useEffect(() => {
     let active = true;
+    const applySession = async (next: typeof user, version: number) => {
+      if (!active || version !== sessionVersion.current) return;
+      if (!next || (currentUser.current && currentUser.current !== next.id)) {
+        setSessionToken("");
+        currentUser.current = null;
+        c.clear();
+        setUser(null);
+        await storeToken("").catch(() => {
+          if (active)
+            setError(
+              "기기에 저장된 로그인 정보를 지우지 못했어요. 다시 로그인해주세요.",
+            );
+        });
+      } else {
+        currentUser.current = next.id;
+        setUser(next);
+      }
+    };
+    const initialVersion = ++sessionVersion.current;
     void readToken()
       .then(async (t) => {
+        if (!active || initialVersion !== sessionVersion.current) return;
         setSessionToken(t || "");
-        const s = await api.session();
-        if (active) setUser(s.user);
+        await applySession((await api.session()).user, initialVersion);
       })
       .catch(() => {
         if (active) setError("로그인 연결을 확인해주세요.");
@@ -64,22 +90,21 @@ export function AuthGate({ children }: { children: ReactNode }) {
       .finally(() => {
         if (active) setReady(true);
       });
+    const verify = () => {
+      const version = ++sessionVersion.current;
+      void api
+        .session()
+        .then((s) => applySession(s.user, version))
+        .catch(() => {});
+    };
     const sub = AppState.addEventListener("change", (state) => {
-      if (state === "active")
-        void api
-          .session()
-          .then((s) => {
-            if (!s.user) {
-              setSessionToken("");
-              c.clear();
-              setUser(null);
-            }
-          })
-          .catch(() => {});
+      if (state === "active") verify();
     });
+    if (Platform.OS === "web") window.addEventListener("focus", verify);
     return () => {
       active = false;
       sub.remove();
+      if (Platform.OS === "web") window.removeEventListener("focus", verify);
     };
   }, [c]);
   if (!ready)
@@ -146,6 +171,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
             label={busy ? "로그인 중…" : "로그인"}
             disabled={busy || !username || !password}
             onPress={() => {
+              sessionVersion.current++;
               setBusy(true);
               setError("");
               void api
@@ -156,9 +182,13 @@ export function AuthGate({ children }: { children: ReactNode }) {
                   if (!s.user) throw new Error("세션을 확인하지 못했어요.");
                   c.clear();
                   setPassword("");
+                  currentUser.current = s.user.id;
                   setUser(s.user);
                 })
-                .catch((e) => setError(e.message))
+                .catch((e) => {
+                  setSessionToken("");
+                  setError(e.message);
+                })
                 .finally(() => setBusy(false));
             }}
           />
@@ -171,16 +201,22 @@ export function AuthGate({ children }: { children: ReactNode }) {
             }}
           />
           <Text>최초 계정은 웹 /setup에서 생성해주세요.</Text>
+          <ServicePolicyLinks />
         </View>
       </ScrollView>
     );
   return (
     <Context.Provider
+      key={user.id}
       value={{
+        ownerId: user.id,
         clearSession: clear,
         logout: async () => {
-          await api.logout();
-          await clear();
+          try {
+            await api.logout();
+          } finally {
+            await clear();
+          }
         },
       }}
     >

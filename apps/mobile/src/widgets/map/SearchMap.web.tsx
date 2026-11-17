@@ -1,11 +1,8 @@
-import { useEffect, useRef } from "react";
+import { useState } from "react";
 import { View, Text, Pressable } from "react-native";
-import {
-  readMapEvent,
-  type RegistrationController,
-} from "@food-map/registration";
-import { apiBaseUrl } from "../../shared/api";
+import type { RegistrationController } from "@food-map/registration";
 import { useSearchMap } from "./useSearchMap";
+import { MapFrame } from "./MapFrame";
 export function SearchMap({
   flow,
   height,
@@ -13,31 +10,8 @@ export function SearchMap({
   flow: RegistrationController;
   height: number;
 }) {
-  const frame = useRef<HTMLIFrameElement>(null),
-    map = useSearchMap(flow),
-    origin = new URL(apiBaseUrl).origin;
-  const { latest } = map;
-  const send = () =>
-    frame.current?.contentWindow?.postMessage(latest.current.state, origin);
-  useEffect(() => {
-    frame.current?.contentWindow?.postMessage(map.state, origin);
-  }, [map.state, origin]);
-  useEffect(() => {
-    const listener = (e: MessageEvent) => {
-      if (e.origin !== origin || e.source !== frame.current?.contentWindow)
-        return;
-      const event = readMapEvent(e.data);
-      if (!event) return;
-      if (event.type === "map-ready")
-        frame.current?.contentWindow?.postMessage(
-          map.latest.current.state,
-          origin,
-        );
-      else map.latest.current.receive(event);
-    };
-    window.addEventListener("message", listener);
-    return () => window.removeEventListener("message", listener);
-  }, [map.latest, origin]);
+  const map = useSearchMap(flow),
+    [error, setError] = useState("");
   return (
     <View
       style={{
@@ -47,12 +21,14 @@ export function SearchMap({
         flexShrink: 0,
       }}
     >
-      <iframe
-        ref={frame}
-        title="검색 지도"
-        src={`${apiBaseUrl}/map-search`}
-        onLoad={send}
-        style={{ width: "100%", height: "100%", border: 0 }}
+      <MapFrame
+        state={map.state}
+        onEvent={map.receive}
+        onError={() =>
+          setError(
+            "지도를 불러오지 못했어요. API 서버 연결과 로그인을 확인해주세요.",
+          )
+        }
       />
       {flow.viewportDirty && (
         <Pressable
@@ -90,7 +66,7 @@ export function SearchMap({
       >
         <Text>{map.locating ? "위치 확인 중" : "현재 위치 표시"}</Text>
       </Pressable>
-      {map.message && !flow.submittedQuery ? (
+      {error || (map.message && !flow.submittedQuery) ? (
         <Text
           style={{
             position: "absolute",
@@ -102,7 +78,7 @@ export function SearchMap({
             padding: 4,
           }}
         >
-          {map.message}
+          {error || map.message}
         </Text>
       ) : null}
     </View>

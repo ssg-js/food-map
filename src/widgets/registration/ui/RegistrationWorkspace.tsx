@@ -4,13 +4,15 @@ import { SelectedPlaceMap } from "@/features/map/components/SelectedPlaceMap";
 import { PlaceRegistrationPanel } from "@/features/place-registration/components/PlaceRegistrationPanel";
 const api = createRegistrationApi();
 export function RegistrationWorkspace({
+  ownerId,
   mode,
   mapKey,
 }: {
+  ownerId: string;
   mode: "mock" | "live";
   mapKey: string;
 }) {
-  const flow = useRegistration(api);
+  const flow = useRegistration(api, ownerId);
   return (
     <main className="workspace">
       <PlaceRegistrationPanel flow={flow} />

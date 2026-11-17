@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ServicePolicyLinks } from "@/features/legal/components/ServicePolicy";
 export function CatalogShell({
   title,
   children,
@@ -22,6 +23,9 @@ export function CatalogShell({
         <h1>{title}</h1>
         {children}
       </main>
+      <footer className="catalog-policy-footer">
+        <ServicePolicyLinks />
+      </footer>
     </div>
   );
 }

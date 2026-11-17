@@ -1,29 +1,35 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { usePathname } from "next/navigation";
 export function SessionGuard() {
   const client = useQueryClient(),
     path = usePathname();
+  const previous = useRef<string | undefined>(undefined);
   useEffect(() => {
     if (
-      ["/login", "/setup", "/recover", "/map-search", "/map-preview"].includes(
-        path,
-      )
+      [
+        "/login",
+        "/setup",
+        "/recover",
+        "/terms",
+        "/privacy",
+        "/map-search",
+        "/map-preview",
+      ].includes(path)
     )
       return;
     let stopped = false;
-    let previous: string | undefined;
     const verify = async () => {
       try {
         const r = await fetch("/api/auth/session", { cache: "no-store" });
         if (!r.ok) return;
         const b = await r.json();
         if (stopped) return;
-        if (!b.user || (previous && previous !== b.user.id)) {
+        if (!b.user || (previous.current && previous.current !== b.user.id)) {
           client.clear();
           window.location.replace("/login");
-        } else previous = b.user.id;
+        } else previous.current = b.user.id;
       } catch {
         /* network failures retain screen with normal request errors */
       }

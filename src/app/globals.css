@@ -1648,3 +1648,24 @@ button:disabled[aria-pressed="true"] {
 
 /* Current location remains a small fixed dot, independent of restaurant highlights. */
 .mock-location-dot { transform: translate(-50%, -50%); }
+
+/* Keep marker visuals compact while preserving a 44px-or-larger touch target. */
+.search-map-pin::before { content: ""; position: absolute; inset: -7px; border-radius: 50%; }
+.mock-map-zoom button, .mock-map-presets button { min-width: 44px; min-height: 44px; }
+@media (max-width: 760px) { .food-map-app .install-button { min-height: 44px; } }
+
+.service-policy-links { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 13px; }
+.service-policy-links a { min-height: 44px; display: inline-flex; align-items: center; color: #1b64da; }
+.catalog-policy-footer { padding: 12px 24px; }
+.policy-page { min-height: 100dvh; background: #f2f4f6; padding: 20px; }
+.policy-page > header { max-width: 800px; margin: 0 auto 20px; display: flex; align-items: center; flex-wrap: wrap; gap: 12px 24px; }
+.policy-page > header > a { min-height: 44px; display: inline-flex; align-items: center; }
+.policy-document { max-width: 800px; margin: 0 auto; padding: clamp(20px, 5vw, 48px); background: white; border-radius: 20px; line-height: 1.75; overflow-wrap: anywhere; }
+.policy-document h1 { font-size: 28px; font-weight: 750; margin: 8px 0 20px; }
+.policy-document h2 { font-size: 20px; font-weight: 700; margin: 28px 0 10px; }
+.policy-document p { margin: 10px 0; }
+.policy-document a { color: #1b64da; text-decoration: underline; text-underline-offset: 3px; }
+.policy-document .policy-version { font-size: 13px; color: #6b7684; }
+.policy-document .policy-draft { background: #f2f4f6; padding: 16px; border-radius: 12px; }
+.policy-document footer { margin-top: 28px; padding-top: 20px; border-top: 1px solid #e5e8eb; }
+.google-maps-credit { font-family: Arial, sans-serif; font-size: 14px; font-weight: 400; color: #4e5968; white-space: nowrap; }

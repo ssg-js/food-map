@@ -1,3 +1,4 @@
+import { requirePageUser } from "@/shared/lib/personal-access";
 import { MapPreviewFrame } from "@/features/map/components/MapPreviewFrame";
 import { z } from "zod";
 export const metadata = {
@@ -9,6 +10,7 @@ export default async function MapPreviewPage({
 }: {
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
+  await requirePageUser();
   const params = await searchParams,
     key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const latitude = Number(params.lat),

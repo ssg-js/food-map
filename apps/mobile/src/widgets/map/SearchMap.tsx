@@ -1,12 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useState } from "react";
 import { View, Text, Pressable } from "react-native";
-import { WebView } from "react-native-webview";
-import {
-  readMapEvent,
-  type RegistrationController,
-} from "@food-map/registration";
-import { apiBaseUrl } from "../../shared/api";
+import type { RegistrationController } from "@food-map/registration";
 import { useSearchMap } from "./useSearchMap";
+import { MapFrame } from "./MapFrame";
 export function SearchMap({
   flow,
   height,
@@ -14,23 +10,8 @@ export function SearchMap({
   flow: RegistrationController;
   height: number;
 }) {
-  const frame = useRef<WebView<Record<never, never>>>(null),
-    map = useSearchMap(flow),
+  const map = useSearchMap(flow),
     [error, setError] = useState("");
-  const source = useMemo(() => ({ uri: `${apiBaseUrl}/map-search` }), []);
-  const { latest } = map;
-  const send = () => {
-    const json = JSON.stringify(JSON.stringify(latest.current.state));
-    frame.current?.injectJavaScript(
-      `window.dispatchEvent(new MessageEvent('message',{data:${json}}));true;`,
-    );
-  };
-  useEffect(() => {
-    const json = JSON.stringify(JSON.stringify(map.state));
-    frame.current?.injectJavaScript(
-      `window.dispatchEvent(new MessageEvent('message',{data:${json}}));true;`,
-    );
-  }, [map.state]);
   return (
     <View
       style={{
@@ -40,27 +21,14 @@ export function SearchMap({
         flexShrink: 0,
       }}
     >
-      <WebView<Record<never, never>>
-        ref={frame}
-        source={source}
-        style={{ flex: 1 }}
-        originWhitelist={[new URL(apiBaseUrl).origin]}
-        onLoadEnd={send}
+      <MapFrame
+        state={map.state}
+        onEvent={map.receive}
         onError={() =>
-          setError("지도를 불러오지 못했어요. API 서버 연결을 확인해주세요.")
+          setError(
+            "지도를 불러오지 못했어요. API 서버 연결과 로그인을 확인해주세요.",
+          )
         }
-        onMessage={(e) => {
-          try {
-            if (
-              new URL(e.nativeEvent.url).origin !== new URL(apiBaseUrl).origin
-            )
-              return;
-            const event = readMapEvent(JSON.parse(e.nativeEvent.data));
-            if (!event) return;
-            if (event.type === "map-ready") send();
-            else map.latest.current.receive(event);
-          } catch {}
-        }}
       />
       {flow.viewportDirty && (
         <Pressable

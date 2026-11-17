@@ -8,6 +8,7 @@ import {
 } from "@tanstack/react-query";
 import {
   createCatalogApi,
+  personalQueryKeys,
   type Restaurant,
   type Category,
   type Place,
@@ -19,17 +20,19 @@ import { SelectedPlaceMap } from "@/features/map/components/SelectedPlaceMap";
 const api = createCatalogApi();
 function PlaceCard({
   item,
+  ownerId,
   onSelect,
   onEdit,
   onDelete,
 }: {
   item: Restaurant;
+  ownerId: string;
   onSelect: (p: Place) => void;
   onEdit: () => void;
   onDelete: () => void;
 }) {
   const place = useQuery({
-    queryKey: ["place-live", item.googlePlaceId],
+    queryKey: personalQueryKeys.place(ownerId, item.googlePlaceId),
     queryFn: ({ signal }) => api.details(item.googlePlaceId, signal),
     retry: false,
     staleTime: Infinity,
@@ -75,7 +78,9 @@ function PlaceCard({
           삭제
         </button>
       </div>
-      <p className="provider-credit">Google Maps</p>
+      <p className="provider-credit google-maps-credit" translate="no">
+        Google Maps
+      </p>
       {place.data?.attributions?.map((a) => (
         <a
           key={a.providerUri ?? a.provider}
@@ -92,9 +97,11 @@ function PlaceCard({
   );
 }
 export function SavedRestaurants({
+  ownerId,
   mapKey,
   mode = "mock",
 }: {
+  ownerId: string;
   mapKey: string;
   mode?: "mock" | "live";
 }) {
@@ -111,18 +118,24 @@ export function SavedRestaurants({
     [ids, setIds] = useState<string[]>([]),
     [notice, setNotice] = useState("");
   const categories = useQuery({
-    queryKey: ["registration", "categories"],
+    queryKey: personalQueryKeys.categories(ownerId),
     queryFn: api.categories,
     retry: false,
   });
   const list = useQuery({
-    queryKey: ["catalog", { food, purpose, dish, q: submittedQ, page }],
+    queryKey: personalQueryKeys.catalogList(ownerId, {
+      food,
+      purpose,
+      dish,
+      q: submittedQ,
+      page,
+    }),
     queryFn: () => api.list({ food, purpose, dish, q: submittedQ, page }),
     retry: false,
   });
   const places = useQueries({
     queries: (list.data?.items || []).map((item) => ({
-      queryKey: ["place-live", item.googlePlaceId],
+      queryKey: personalQueryKeys.place(ownerId, item.googlePlaceId),
       queryFn: ({ signal }: { signal: AbortSignal }) =>
         api.details(item.googlePlaceId, signal),
       retry: false,
@@ -142,10 +155,11 @@ export function SavedRestaurants({
       setDeleting(null);
       setSelected(null);
       setPage(1);
-      void client.invalidateQueries({ queryKey: ["catalog"] });
-      void client.invalidateQueries({ queryKey: ["restaurants"] });
       void client.invalidateQueries({
-        queryKey: ["registration", "categories"],
+        queryKey: personalQueryKeys.catalog(ownerId),
+      });
+      void client.invalidateQueries({
+        queryKey: personalQueryKeys.categories(ownerId),
       });
     },
     retry: false,
@@ -176,7 +190,7 @@ export function SavedRestaurants({
       <p className="catalog-intro">
         기억해둔 맛집을 음식과 방문 목적에 맞춰 찾아보세요.
       </p>
-      <OperatorAccess />
+      <OperatorAccess ownerId={ownerId} />
       <section className="catalog-filters" aria-label="저장한 맛집 필터">
         <form
           onSubmit={(e) => {
@@ -291,6 +305,7 @@ export function SavedRestaurants({
           )}
           {list.data?.items.map((item) => (
             <PlaceCard
+              ownerId={ownerId}
               key={item.id + item.updatedAt}
               item={item}
               onSelect={select}

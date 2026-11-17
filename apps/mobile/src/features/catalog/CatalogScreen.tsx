@@ -17,6 +17,8 @@ import {
   useQueryClient,
   useMutation,
 } from "@tanstack/react-query";
+import { personalQueryKeys } from "@food-map/registration";
+import { usePersonalAuth } from "../auth/AuthGate";
 import type {
   Restaurant,
   Category,
@@ -57,17 +59,19 @@ function Chip({
 }
 function SavedCard({
   item,
+  ownerId,
   onSelect,
   onEdit,
   onDelete,
 }: {
   item: Restaurant;
+  ownerId: string;
   onSelect: (p: Place) => void;
   onEdit: () => void;
   onDelete: () => void;
 }) {
   const place = useQuery({
-    queryKey: ["place-live", item.googlePlaceId],
+    queryKey: personalQueryKeys.place(ownerId, item.googlePlaceId),
     queryFn: ({ signal }) => api.details(item.googlePlaceId, signal),
     retry: false,
     staleTime: Infinity,
@@ -109,7 +113,11 @@ function SavedCard({
           );
         }}
       />
-      <Text style={s.muted}>Google Maps</Text>
+      <Text
+        style={[s.muted, { fontSize: 14, fontWeight: "400", color: "#4e5968" }]}
+      >
+        Google Maps
+      </Text>
       {place.data?.attributions?.map((a) => (
         <Text
           key={a.providerUri ?? a.provider}
@@ -126,6 +134,7 @@ function SavedCard({
   );
 }
 export function CatalogScreen({ mode }: { mode: "saved" | "categories" }) {
+  const { ownerId } = usePersonalAuth();
   const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
   const client = useQueryClient(),
     [page, setPage] = useState(1),
@@ -143,19 +152,25 @@ export function CatalogScreen({ mode }: { mode: "saved" | "categories" }) {
     [kind, setKind] = useState<EditableCategoryKind>("FOOD"),
     [notice, setNotice] = useState("");
   const categories = useQuery({
-    queryKey: ["registration", "categories"],
+    queryKey: personalQueryKeys.categories(ownerId),
     queryFn: api.categories,
     retry: false,
   });
   const list = useQuery({
-    queryKey: ["catalog", { page, food, purpose, dish, q: submittedQ }],
+    queryKey: personalQueryKeys.catalogList(ownerId, {
+      page,
+      food,
+      purpose,
+      dish,
+      q: submittedQ,
+    }),
     queryFn: () => api.list({ page, food, purpose, dish, q: submittedQ }),
     enabled: mode === "saved",
     retry: false,
   });
   const places = useQueries({
     queries: (list.data?.items || []).map((item) => ({
-      queryKey: ["place-live", item.googlePlaceId],
+      queryKey: personalQueryKeys.place(ownerId, item.googlePlaceId),
       queryFn: ({ signal }: { signal: AbortSignal }) =>
         api.details(item.googlePlaceId, signal),
       retry: false,
@@ -182,9 +197,11 @@ export function CatalogScreen({ mode }: { mode: "saved" | "categories" }) {
       setNotice("변경 내용을 저장했어요.");
       setPlace(null);
       setPage(1);
-      void client.invalidateQueries({ queryKey: ["catalog"] });
       void client.invalidateQueries({
-        queryKey: ["registration", "categories"],
+        queryKey: personalQueryKeys.catalog(ownerId),
+      });
+      void client.invalidateQueries({
+        queryKey: personalQueryKeys.categories(ownerId),
       });
     },
   });
@@ -331,6 +348,7 @@ export function CatalogScreen({ mode }: { mode: "saved" | "categories" }) {
             )}
             {list.data?.items.map((item) => (
               <SavedCard
+                ownerId={ownerId}
                 key={item.id + item.updatedAt}
                 item={item}
                 onSelect={(p) => {

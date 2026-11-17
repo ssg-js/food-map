@@ -1,4 +1,5 @@
 "use client";
+import { personalQueryKeys } from "./personal-query-keys";
 import { viewportKey, type MapViewport } from "./viewport";
 import { useCallback, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -13,7 +14,7 @@ import {
   type EditableCategoryKind,
   type RegistrationApiError,
 } from "./api";
-export function useRegistration(api: RegistrationApi) {
+export function useRegistration(api: RegistrationApi, ownerId: string) {
   const queryClient = useQueryClient();
   const selectionVersion = useRef(0);
   const [viewport, setArea] = useState<MapViewport | null>(null);
@@ -49,18 +50,19 @@ export function useRegistration(api: RegistrationApi) {
     null,
   );
   const categories = useQuery({
-    queryKey: ["registration", "categories"],
+    queryKey: personalQueryKeys.categories(ownerId),
     queryFn: api.categories,
     enabled: selectedPlace !== null,
     retry: false,
     staleTime: 5 * 60_000,
   });
   const createCategory = useMutation({
+    mutationKey: personalQueryKeys.registration(ownerId, "create-category"),
     mutationFn: api.createCategory,
     retry: false,
     onSuccess: (category) => {
       queryClient.setQueryData<Category[]>(
-        ["registration", "categories"],
+        personalQueryKeys.categories(ownerId),
         (previous) =>
           [
             ...(previous ?? []).filter((item) => item.id !== category.id),
@@ -73,17 +75,20 @@ export function useRegistration(api: RegistrationApi) {
     },
   });
   const save = useMutation({
+    mutationKey: personalQueryKeys.registration(ownerId, "save"),
     mutationFn: api.save,
     retry: false,
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["restaurants"] });
-      void queryClient.invalidateQueries({ queryKey: ["catalog"] });
       void queryClient.invalidateQueries({
-        queryKey: ["registration", "categories"],
+        queryKey: personalQueryKeys.catalog(ownerId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: personalQueryKeys.categories(ownerId),
       });
     },
   });
   const existing = useMutation({
+    mutationKey: personalQueryKeys.registration(ownerId, "find-saved"),
     mutationFn: async ({
       place,
       version,
@@ -98,6 +103,7 @@ export function useRegistration(api: RegistrationApi) {
     },
   });
   const searchMutation = useMutation({
+    mutationKey: personalQueryKeys.registration(ownerId, "search"),
     mutationFn: ({
       query,
       viewport,

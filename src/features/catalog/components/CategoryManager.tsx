@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   createCatalogApi,
+  personalQueryKeys,
   type Category,
   type EditableCategoryKind,
 } from "@food-map/registration";
@@ -10,10 +11,10 @@ import { CatalogShell } from "./CatalogShell";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { OperatorAccess } from "./OperatorAccess";
 const api = createCatalogApi();
-export function CategoryManager() {
+export function CategoryManager({ ownerId }: { ownerId: string }) {
   const client = useQueryClient(),
     query = useQuery({
-      queryKey: ["registration", "categories"],
+      queryKey: personalQueryKeys.categories(ownerId),
       queryFn: api.categories,
       retry: false,
     });
@@ -36,9 +37,11 @@ export function CategoryManager() {
       setEditing(null);
       setRemoving(null);
       void client.invalidateQueries({
-        queryKey: ["registration", "categories"],
+        queryKey: personalQueryKeys.categories(ownerId),
       });
-      void client.invalidateQueries({ queryKey: ["catalog"] });
+      void client.invalidateQueries({
+        queryKey: personalQueryKeys.catalog(ownerId),
+      });
     },
     retry: false,
   });
@@ -54,7 +57,7 @@ export function CategoryManager() {
         내 계정의 분류를 정리해요. 이름과 분류를 바꿔도 기존 맛집 연결은
         유지돼요.
       </p>
-      <OperatorAccess />
+      <OperatorAccess ownerId={ownerId} />
       {notice && (
         <p role="status" className="feedback">
           {notice}

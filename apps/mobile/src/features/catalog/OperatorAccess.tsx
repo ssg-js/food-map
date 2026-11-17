@@ -1,3 +1,4 @@
+import { ServicePolicyLinks } from "../legal/ServicePolicyLinks";
 import { router } from "expo-router";
 import { View, Text } from "react-native";
 import { useState } from "react";
@@ -23,6 +24,7 @@ export function OperatorAccess() {
           );
         }}
       />
+      <ServicePolicyLinks />
       {error ? <Feedback error>{error}</Feedback> : null}
     </View>
   );

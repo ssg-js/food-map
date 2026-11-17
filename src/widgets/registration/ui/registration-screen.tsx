@@ -4,7 +4,7 @@ import Link from "next/link";
 
 import { Icon } from "@/shared/ui/icon";
 import { InstallAppButton } from "@/features/pwa/components/InstallAppButton";
-export function RegistrationScreen() {
+export function RegistrationScreen({ ownerId }: { ownerId: string }) {
   return (
     <div className="food-map-app">
       <a href="#registration" className="skip-link">
@@ -26,9 +26,11 @@ export function RegistrationScreen() {
         <InstallAppButton />
       </header>
       <div className="workspace-account">
-        <OperatorAccess />
+        <OperatorAccess ownerId={ownerId} />
       </div>
       <RegistrationWorkspace
+        key={ownerId}
+        ownerId={ownerId}
         mode={process.env.EXTERNAL_API_MODE === "live" ? "live" : "mock"}
         mapKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""}
       />

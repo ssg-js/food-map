@@ -1,11 +1,13 @@
 "use client";
+import { notifySessionChanged } from "@/features/auth/model/session-change";
+import { personalQueryKeys } from "@food-map/registration";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-export function OperatorAccess() {
+export function OperatorAccess({ ownerId }: { ownerId: string }) {
   const c = useQueryClient(),
     [error, setError] = useState("");
   const q = useQuery({
-    queryKey: ["personal-session"],
+    queryKey: personalQueryKeys.session(ownerId),
     queryFn: async () => {
       const r = await fetch("/api/auth/session", { cache: "no-store" });
       return r.json();
@@ -19,6 +21,7 @@ export function OperatorAccess() {
         <a href="/admin/api-usage">API 사용량</a>
       )}
       <a href="/account/security">계정 보안·비밀번호 변경</a>
+      <a href="/terms">이용·데이터 안내</a>
       <button
         className="text-button"
         onClick={async () => {
@@ -26,7 +29,7 @@ export function OperatorAccess() {
             const r = await fetch("/api/auth/logout", { method: "POST" });
             if (!r.ok) throw new Error("로그아웃을 완료하지 못했어요.");
             c.clear();
-            localStorage.setItem("food-map-session", String(Date.now()));
+            notifySessionChanged();
             window.location.replace("/login");
           } catch (e) {
             setError((e as Error).message);

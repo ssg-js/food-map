@@ -1,4 +1,5 @@
 "use client";
+import { notifySessionChanged } from "@/features/auth/model/session-change";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 type Usage = {
@@ -129,7 +130,7 @@ export function AdminDashboard() {
                   setError("로그아웃하지 못했어요.");
                   return;
                 }
-                localStorage.setItem("food-map-session", String(Date.now()));
+                notifySessionChanged();
                 window.location.replace("/login");
               }}
             >
